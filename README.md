@@ -1,5 +1,6 @@
 # LSD-SLAM: Large-Scale Direct Monocular SLAM
 
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/c87a1633dad749e9aa47fd3c1809e7f9)](https://www.codacy.com/app/amarburg/lsd_slam?utm_source=github.com&utm_medium=referral&utm_content=amarburg/lsd_slam&utm_campaign=badger)
 [![wercker status](https://app.wercker.com/status/4c30e195acc92af03c75e1f3451b6916/m/master "wercker status")](https://app.wercker.com/project/byKey/4c30e195acc92af03c75e1f3451b6916)
 
 See my [Development Blog](http://staff.washington.edu/amarburg/site/) for current status.
