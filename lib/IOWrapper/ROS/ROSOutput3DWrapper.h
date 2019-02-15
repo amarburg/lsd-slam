@@ -23,6 +23,18 @@
 #include <ros/ros.h>
 #include "IOWrapper/Output3DWrapper.h"
 
+
+#include <pcl_ros/point_cloud.h>
+#include <pcl/point_types.h>
+#include <pcl_conversions/pcl_conversions.h>
+#include <pcl/io/pcd_io.h>
+#include <pcl/filters/voxel_grid.h>
+
+
+typedef pcl::PointXYZRGB PointT;
+typedef pcl::PointCloud<PointT> PointCloud;
+
+
 namespace lsd_slam
 {
 
@@ -69,7 +81,7 @@ public:
 	virtual void publishKeyframeGraph(const std::shared_ptr<KeyFrameGraph> &graph);
 
 	//Publish pointcloud from graph
-	virtual void publishPointCloud(const std::shared_ptr<KeyFrameGraph> &graph);
+	virtual void publishPointCloud(const Frame::SharedPtr &kf);
 
 	virtual void updateDepthImage(unsigned char * data);
 
@@ -109,5 +121,7 @@ private:
 	ros::Publisher pointcloud_publisher;
 
 	ros::NodeHandle nh_;
+
+	PointCloud::Ptr pointcloudMsg;
 };
 }

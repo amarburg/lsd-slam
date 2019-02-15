@@ -323,9 +323,9 @@ void SlamSystem::publishKeyframeGraph( void )
   }
 }
 
-void SlamSystem::publishPointCloud( ){
+void SlamSystem::publishPointCloud( const Frame::SharedPtr &frame ){
 	if( _outputWrapper ){
-		 _outputWrapper->publishPointCloud( keyFrameGraph() );
+		 _outputWrapper->publishPointCloud( frame );
 	 }
 
 }

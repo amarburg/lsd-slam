@@ -351,7 +351,7 @@ bool MappingThread::updateKeyframe()
 		_system.publishKeyframe( _system.currentKeyFrame() );
 		//Publish graph at same frequency as Key Frame
 		_system.publishKeyframeGraph();
-		_system.publishPointCloud();
+		_system.publishPointCloud( _system.currentKeyFrame() );
 	}
 
 	return true;
@@ -389,7 +389,7 @@ void MappingThread::finishCurrentKeyframe()
 	_system.publishKeyframe(_system.currentKeyFrame() );
 	//Publish graph and pointcloud at same frequency as Key Frame
 	_system.publishKeyframeGraph();
-	_system.publishPointCloud();
+	_system.publishPointCloud( _system.currentKeyFrame() );
 }
 
 void MappingThread::discardCurrentKeyframe()

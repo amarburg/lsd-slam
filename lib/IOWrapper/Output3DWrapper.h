@@ -52,7 +52,7 @@ public:
 
 	virtual void publishKeyframeGraph( const std::shared_ptr<KeyFrameGraph> &graph) = 0;
 
-	virtual void publishPointCloud( const std::shared_ptr<KeyFrameGraph> &graph) = 0;
+	virtual void publishPointCloud( const Frame::SharedPtr &kf) = 0;
 
 	// publishes a keyframe. if that frame already exists, it is overwritten, otherwise it is added.
 	virtual void publishKeyframe(const Frame::SharedPtr &kf) = 0;

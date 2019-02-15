@@ -34,22 +34,13 @@
 #include "geometry_msgs/PoseStamped.h"
 #include "GlobalMapping/g2oTypeSim3Sophus.h"
 
-#include <pcl_ros/point_cloud.h>
-#include <pcl/point_types.h>
-#include <pcl/point_types.h>
-#include <pcl_conversions/pcl_conversions.h>
-
-
-typedef pcl::PointXYZRGB PointT;
-typedef pcl::PointCloud<PointT> PointCloud;
-
 
 
 namespace lsd_slam
 {
 
 
-ROSOutput3DWrapper::ROSOutput3DWrapper(int width, int height)
+ROSOutput3DWrapper::ROSOutput3DWrapper(int width, int height) : pointcloudMsg (new PointCloud )
 {
 	this->width = width;
 	this->height = height;
@@ -69,8 +60,12 @@ ROSOutput3DWrapper::ROSOutput3DWrapper(int width, int height)
 	pose_channel = nh_.resolveName("lsd_slam/pose");
 	pose_publisher = nh_.advertise<geometry_msgs::PoseStamped>(pose_channel,1);
 
-	pointcloud_channel = nh_.resolveName("lsd_slam/pointcloud");
-	pointcloud_publisher = nh_.advertise<PointCloud> (pointcloud_channel, 1);
+	//pointcloud_channel = nh_.resolveName("lsd_slam/pointcloud");
+	pointcloud_publisher = nh_.advertise<PointCloud> ("lsd_slam/pointcloud", 1);
+
+	pointcloudMsg->header.frame_id = "map";
+
+
 
 	//TODO what is this??
 	publishLvl=0;
@@ -206,41 +201,101 @@ void ROSOutput3DWrapper::publishKeyframeGraph(const std::shared_ptr<KeyFrameGrap
 	graph_publisher.publish(gMsg);
 }
 
-void ROSOutput3DWrapper::publishPointCloud(const std::shared_ptr<KeyFrameGraph> &graph)
+void ROSOutput3DWrapper::publishPointCloud(const Frame::SharedPtr &kf)
 {
-	//Debating if I want to put this in the constructor or not...
-	PointCloud::Ptr pointcloudMsg(new PointCloud);
-	pointcloudMsg->header.frame_id = "map";
+	kf->getActiveLock();
 
+	int w = kf->width(publishLvl);
+	int h = kf->height(publishLvl);
+
+	//get world transformation
+	SE3 camToWorld = se3FromSim3(kf->getCamToWorld());
+	Eigen::Matrix4f G = Eigen::Matrix4f::Zero(4,4);
+	Eigen::Matrix3f R;
+	Eigen::Vector3f T;
+	Eigen::Quaterniond q;
+	q.x() = camToWorld.so3().unit_quaternion().x();
+	q.y() = camToWorld.so3().unit_quaternion().y();
+	q.z() = camToWorld.so3().unit_quaternion().z();
+	q.w() = camToWorld.so3().unit_quaternion().w();
+	if (q.w() < 0)
+	{
+		q.x() *= -1;
+		q.y() *= -1;
+		q.z() *= -1;
+		q.w() *= -1;
+	}
+	R = q.toRotationMatrix().cast<float>();
+	T(0) = camToWorld.translation()[0];
+	T(1) = camToWorld.translation()[1];
+	T(2) = camToWorld.translation()[2];
+	G.block<3,3>(0,0) = R;
+	G.block<3,1>(0,3) = T;
+	G(3,3) = 1.0;
+	Eigen::Matrix3f Kinv = kf->Kinv(publishLvl);
+
+	//update PointCloud
+	int prevSize = pointcloudMsg->points.size();
+	pointcloudMsg->points.resize(prevSize + w*h);
+	const float* idepth = kf->idepth(publishLvl);
+	const float* idepthVar = kf->idepthVar(publishLvl);
+	const float* color = kf->image(publishLvl);
+
+  int idx = prevSize - 1;
+
+	for (int y=0;y<h;y++)
+	{
+		for (int x=0;x<w;x++)
+		{
+			idx += 1;
+			float z = idepth[x*y];
+			if (z > 0 && idx < pointcloudMsg->points.size())
+			{
+				//Get accurate scale, transform frame
+				Eigen::Vector3f xImg;
+				xImg << x,y,1;
+				Eigen::Vector3f xWorldRelative = Kinv*xImg;
+				Eigen::Vector4f xWorld;
+				xWorld << xWorldRelative(0)/xWorldRelative(2),
+									xWorldRelative(1)/xWorldRelative(2), z, 1.0;
+				Eigen::Vector4f xWorldTrans = G*xWorld;
+				//Add to pointcloud
+				pointcloudMsg->points[idx].x = xWorldTrans(0)/xWorldTrans(3);
+				pointcloudMsg->points[idx].y = xWorldTrans(1)/xWorldTrans(3);
+				pointcloudMsg->points[idx].z = xWorldTrans(2)/xWorldTrans(3);//xWorldTrans(2);
+				//TODO forgot we're grayscale...
+				pointcloudMsg->points[idx].r = color[x*y];
+				pointcloudMsg->points[idx].g = color[x*y];
+				pointcloudMsg->points[idx].b = color[x*y];
+
+			}
+
+		}
+	}
+	/*
+	PointCloud::Ptr pointcloudFiltered(new PointCloud);
+	pcl::VoxelGrid<PointT> vox;
+  vox.setInputCloud (pointcloudMsg);
+  vox.setLeafSize (0.01f, 0.01f, 0.01f);
+  vox.filter (*pointcloudFiltered);
+
+	pointcloudFiltered->header.frame_id = "map";
+	pointcloud_publisher.publish(pointcloudFiltered);
+	*/
+
+	/*
 	graph->edgesListsMutex.lock();
-	
+
 	//Loop through all keyframes
 	for (unsigned int i=0; i<graph->edgesAll.size();i++)
 	{
 
 		Frame::SharedPtr kf = graph->keyframesAll.at(i);
 
-		int w = kf->width(publishLvl);
-		int h = kf->height(publishLvl);
-
-		//get world transformation
-		SE3 camToWorld = se3FromSim3(kf->getCamToWorld());
-		Eigen::Matrix4d G;
-
-		Eigen::Quaterniond q;
-
-	  q.x() = camToWorld.so3().unit_quaternion().x();
-		q.y() = camToWorld.so3().unit_quaternion().y();
-		q.z() = camToWorld.so3().unit_quaternion().z();
-		q.w() = camToWorld.so3().unit_quaternion().w();
-		Eigen::Matrix3d R = q.normalized().toRotationMatrix();
 
 
+		std::cout << G << std::endl;
 
-
-		//pMsg.pose.position.x = camToWorld.translation()[0];
-		//pMsg.pose.position.y = camToWorld.translation()[1];
-		//pMsg.pose.position.z = camToWorld.translation()[2];
 
 
 
@@ -253,6 +308,7 @@ void ROSOutput3DWrapper::publishPointCloud(const std::shared_ptr<KeyFrameGraph> 
 
 
   graph->edgesListsMutex.unlock();
+	*/
 
 }
 

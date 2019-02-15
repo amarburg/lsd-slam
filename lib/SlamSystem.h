@@ -111,7 +111,7 @@ public:
 	void publishTrackedFrame( const Frame::SharedPtr &frame )      { if( _outputWrapper ) _outputWrapper->publishTrackedFrame( frame ); }
 	void publishKeyframe(  const Frame::SharedPtr &frame );
 	void publishKeyframeGraph( void );
-	void publishPointCloud();
+	void publishPointCloud( const Frame::SharedPtr &frame );
 	void publishDepthImage( unsigned char* data  )                 { if( _outputWrapper ) _outputWrapper->updateDepthImage( data ); }
 
 	void updateDisplayDepthMap();
