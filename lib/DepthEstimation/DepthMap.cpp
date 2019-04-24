@@ -172,27 +172,25 @@ void DepthMap::initializeFromStereo() {
           currentDepthMap[idx] = DepthMapPixelHypothesis(
               idepth, idepth, VAR_RANDOM_INIT_INITIAL, VAR_RANDOM_INIT_INITIAL,
               20, Conf().debugDisplay);
+        } else {
+          if (maxGradients[idx] > MIN_ABS_GRAD_CREATE) {
+            float r =
+                (static_cast<float>(rand()) / static_cast<float>(RAND_MAX) -
+                 0.5) *
+                2; // random from [-1,1]
+
+            float idepth = iDepthMean + iDepthMean / 2 * r;
+            // std::cout << rand() % iDepthMean - iDepthMean / 2 <<
+            // std::endl;
+            // iDepthMean + iDepthMean * ((rand() % 100001) / 100000.0f);
+            currentDepthMap[idx] = DepthMapPixelHypothesis(
+                idepth, idepth, VAR_RANDOM_INIT_INITIAL,
+                VAR_RANDOM_INIT_INITIAL, 20, Conf().debugDisplay);
+          } else {
+            currentDepthMap[idx].isValid = false;
+            currentDepthMap[idx].blacklisted = 0;
+          }
         }
-        // else {
-        //   if (maxGradients[idx] > MIN_ABS_GRAD_CREATE) {
-        //     float r =
-        //         (static_cast<float>(rand()) / static_cast<float>(RAND_MAX) -
-        //          0.5) *
-        //         2; // random from [-1,1]
-        //
-        //     float idepth = iDepthMean + iDepthMean / 2 * r;
-        //     // std::cout << rand() % iDepthMean - iDepthMean / 2 <<
-        //     // std::endl;
-        //     // iDepthMean + iDepthMean * ((rand() % 100001) / 100000.0f);
-        //     currentDepthMap[idx] = DepthMapPixelHypothesis(
-        //         idepth, idepth, VAR_RANDOM_INIT_INITIAL,
-        //         VAR_RANDOM_INIT_INITIAL, 20, Conf().debugDisplay);
-        //   }
-        //   // else {
-        //   //   currentDepthMap[idx].isValid = false;
-        //   //   currentDepthMap[idx].blacklisted = 0;
-        //   // }
-        // }
         iDepth++;
         iDepthValid++;
       }
@@ -927,11 +925,11 @@ bool DepthMap::observeDepthUpdate(const int &x, const int &y, const int &idx,
     // update var with observation
     float w = result_var / (result_var + id_var);
     float new_idepth = (1 - w) * result_idepth + w * target->idepth;
-    // target->idepth = UNZERO(new_idepth);
+    target->idepth = UNZERO(new_idepth);
 
-    if (valid) {
-      target->idepth = UNZERO(result_idepth);
-    }
+    // if (valid) {
+    //   target->idepth = UNZERO(result_idepth);
+    // }
     // else {
     //   float new_idepth = (1 - w) * result_idepth + w * target->idepth;
     //   target->idepth = UNZERO(new_idepth);
@@ -1155,34 +1153,31 @@ void DepthMap::propagateDepthFromSet(const DepthMap::SharedPtr &other,
                 id +
             trafoInv_t;
         // depthImg2.at<float>(y, x) = pn[2];
+      } else {
+        float current_depth = 1 / (*iDepth);
+        // Eigen::Vector3f pn1 =
+        //     (trafoInv_R *
+        //      Eigen::Vector3f(x * fxi + cxi, y * fyi + cyi, current_depth))
+        //      +
+        //     trafoInv_t;
+        Eigen::Vector3f pn1 =
+            (trafoInv_R * Eigen::Vector3f(x * fxi + cxi, y * fyi + cyi, 1.0f)) /
+                current_depth +
+            trafoInv_t;
+
+        Eigen::Vector3f pn2 =
+            (trafoInv_R * Eigen::Vector3f(x * fxi + cxi, y * fyi + cyi, 1.0f)) /
+                source->idepth_smoothed +
+            trafoInv_t;
+        // pn = (pn1 + pn2) / 2;
+        pn = pn1;
       }
-      // else {
-      //   float current_depth = 1 / (*iDepth);
-      //   // Eigen::Vector3f pn1 =
-      //   //     (trafoInv_R *
-      //   //      Eigen::Vector3f(x * fxi + cxi, y * fyi + cyi, current_depth))
-      //   //      +
-      //   //     trafoInv_t;
-      //   Eigen::Vector3f pn1 =
-      //       (trafoInv_R * Eigen::Vector3f(x * fxi + cxi, y * fyi +
-      //       cyi, 1.0f)) /
-      //           current_depth +
-      //       trafoInv_t;
-      //
-      //   Eigen::Vector3f pn2 =
-      //       (trafoInv_R * Eigen::Vector3f(x * fxi + cxi, y * fyi +
-      //       cyi, 1.0f)) /
-      //           source->idepth_smoothed +
-      //       trafoInv_t;
-      //   // pn = (pn1 + pn2) / 2;
-      //   pn = pn1;
-      // }
-      // new_idepth = (1.0f / pn[2]);
-      // if (valid) {
-      //   iDepthCount++;
-      //   iDepthSum += new_idepth;
-      //   dispartiyMapSum += *iDepth;
-      // }
+      new_idepth = (1.0f / pn[2]);
+      if (valid) {
+        iDepthCount++;
+        iDepthSum += new_idepth;
+        dispartiyMapSum += *iDepth;
+      }
       float u_new = pn[0] * new_idepth * fx + cx;
       float v_new = pn[1] * new_idepth * fy + cy;
 
