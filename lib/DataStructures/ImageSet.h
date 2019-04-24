@@ -31,13 +31,17 @@ namespace lsd_slam {
 class ImageSet {
 public:
   struct Disparity {
+  public:
+    Disparity()
+        : iDepth(nullptr), iDepthValid(nullptr), iDepthSize(0),
+          iDepthMean(0.5) {
+      ;
+    }
+
     float *iDepth;
     uint8_t *iDepthValid;
-    int iDepthSize = 0;
-    float iDepthMean = 0.5;
-    // Disparity(float *_iDepth, bool _iDepthValid, int _iDepthSize)
-    //    : iDepth(_iDepth), iDepthValid(_iDepthValid), iDepthSize(_iDepthSize)
-    //    {}
+    int iDepthSize;
+    float iDepthMean;
   };
   ImageSet() = delete;
 
