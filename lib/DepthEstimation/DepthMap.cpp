@@ -1069,9 +1069,10 @@ void DepthMap::propagateDepthFromSet(const DepthMap::SharedPtr &other,
   float dispartiyMapSum = 0;
   float iDepthSum = 0;
   float iDepthCount = 0;
-  bool valid = false;
+
   for (int y = 0; y < Conf().slamImageSize.height; y++)
     for (int x = 0; x < Conf().slamImageSize.width; x++) {
+      bool valid = false;
       const DepthMapPixelHypothesis *source = other->hypothesisAt(x, y);
 
       if (!source->isValid) {
@@ -1082,7 +1083,9 @@ void DepthMap::propagateDepthFromSet(const DepthMap::SharedPtr &other,
       runningStats.num_prop_attempts++;
       Eigen::Vector3f pn;
       if (iDepthValid != nullptr) {
-        bool valid = *iDepthValid;
+        valid = *iDepthValid;
+        iDepth++;
+        iDepthValid++;
       }
       float new_idepth;
       float id = source->idepth_smoothed;
@@ -1091,9 +1094,14 @@ void DepthMap::propagateDepthFromSet(const DepthMap::SharedPtr &other,
            trafoInv_t;
       new_idepth = (1.0f / pn[2]);
       if (valid) {
+        // LOG(WARNING) << "VALID";
         iDepthCount++;
+        // std::cout << "Cout: " << iDepthCount << std::endl;
+        // std::cout << "new_idepth: " << new_idepth << std::endl;
         iDepthSum += new_idepth;
-        dispartiyMapSum += *iDepth;
+        // std::cout << "iDepthSum: " << iDepthSum << std::endl;
+        dispartiyMapSum += std::abs(*iDepth); // always actually positive, but
+                                              // disparity map may have it off
       }
       float u_new = pn[0] * new_idepth * fx + cx;
       float v_new = pn[1] * new_idepth * fy + cy;
@@ -1190,10 +1198,10 @@ void DepthMap::propagateDepthFromSet(const DepthMap::SharedPtr &other,
             1.0f / (1.0f / targetBest->idepth_var + 1.0f / new_var),
             merged_validity, Conf().debugDisplay);
       }
-      if (iDepth != nullptr) {
-        iDepth++;
-        iDepthValid++;
-      }
+      // if (iDepth != nullptr) {
+      //   iDepth++;
+      //   iDepthValid++;
+      // }
     }
 
   _meanIDepth = iDepthSum / iDepthCount;
