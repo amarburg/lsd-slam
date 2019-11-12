@@ -97,9 +97,13 @@ public:
   bool useVoxelFilter;
   float pclLeafSize;
 
-  //Gradint creation paramaters
+  // Gradint creation paramaters
   float minAbsGradCreate;
   float minAbsGradDecrease;
+
+  // image pre-processing
+  bool doImageSharpen;
+  int saturationKernelSize;
 
   struct PrintConfiguration {
     PrintConfiguration();

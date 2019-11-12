@@ -61,6 +61,9 @@ DepthMap::DepthMap(const ImageSet::SharedPtr &set)
       useDisparity(true) {
   const size_t imgArea(Conf().slamImageSize.area());
 
+  // Conf().minAbsGradCreate = 2.0;
+  // Conf().minAbsGradDecrease = 2.0;
+
   trav_KF << 0, 0, 0;
 
   otherDepthMap = new DepthMapPixelHypothesis[imgArea];
@@ -464,11 +467,11 @@ void DepthMap::observeDepthRow(int yMin, int yMax, RunningStats *stats) {
         debugGradientImg.at<float>(y, x) = 1.0;
 
       // ======== 1. check absolute grad =========
-      if (hasHypothesis && keyFrameMaxGradBuf[idx] < Conf().minAbsGradDecrease) {
+      if (hasHypothesis &&
+          keyFrameMaxGradBuf[idx] < Conf().minAbsGradDecrease) {
         target->isValid = false;
         continue;
       }
-
       if (keyFrameMaxGradBuf[idx] < Conf().minAbsGradCreate ||
           target->blacklisted < MIN_BLACKLIST)
         continue;
