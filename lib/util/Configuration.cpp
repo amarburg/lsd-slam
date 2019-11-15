@@ -10,9 +10,9 @@ Configuration &Conf() {
 }
 
 Configuration::Configuration()
-    : runRealTime(true), doDepth(NO_STEREO), stopOnFailedRead(true),
-      SLAMEnabled(true), doKFReActivation(true), doMapping(true),
-      continuousPCOutput(true),
+    : doStereo(true), runRealTime(true), doDepth(NO_STEREO),
+      stopOnFailedRead(true), SLAMEnabled(true), doKFReActivation(true),
+      doMapping(true), continuousPCOutput(true),
 
       debugDisplay(2), displayDepthMap(false), displayGradientMap(false),
       onSceenInfoDisplay(true), dumpMap(false), doFullReConstraintTrack(false),
