@@ -111,7 +111,11 @@ void DepthMap::initializeFromFrame() {
 
 void DepthMap::initializeFromSet() {
   CHECK(_set != nullptr) << "SET HAS NOT BEEN SET";
-  initializeFromStereo();
+  if (Conf().doStereo) {
+    initializeFromStereo();
+  } else {
+    initializeRandomly();
+  }
 }
 
 void DepthMap::initializeFromStereo() {
@@ -163,7 +167,6 @@ void DepthMap::initializeRandomly() {
   for (int y = 1; y < (Conf().slamImageSize.height - 1); y++) {
     for (int x = 1; x < (Conf().slamImageSize.width - 1); x++) {
       int idx = x + y * Conf().slamImageSize.width;
-
       if (maxGradients[idx] > Conf().minAbsGradCreate) {
         float idepth = 0.5f + 1.0f * ((rand() % 100001) / 100000.0f);
         currentDepthMap[idx] = DepthMapPixelHypothesis(
@@ -458,9 +461,16 @@ void DepthMap::observeDepthRow(int yMin, int yMax, RunningStats *stats) {
   for (int y = yMin; y < yMax; y++)
     for (int x = 3; x < Conf().slamImageSize.width - 3; x++) {
       int idx = x + y * Conf().slamImageSize.width;
-      uint8_t *iDepthValid = _set->disparity.iDepthValid + idx;
-      float *iDepth = _set->disparity.iDepth + idx;
-      bool valid = *iDepthValid;
+      uint8_t *iDepthValid;
+      bool valid;
+
+      if (Conf().doStereo) {
+        iDepthValid = _set->disparity.iDepthValid + idx;
+        valid = *iDepthValid;
+      } else {
+        valid = true;
+      }
+
       DepthMapPixelHypothesis *target = currentDepthMap + idx;
       bool hasHypothesis = target->isValid;
       if (hasHypothesis && Conf().displayGradientMap)
@@ -507,12 +517,9 @@ bool DepthMap::createNewStereoDepthPoint(const int &x, const int &y,
   return true;
 }
 
-// TODO Can probably remove, not used in this LSD slam branch
 bool DepthMap::observeDepthCreate(const int &x, const int &y, const int &idx,
                                   RunningStats *const &stats) {
   DepthMapPixelHypothesis *target = currentDepthMap + idx;
-
-  float *iDepth = _set->disparity.iDepth + idx;
   if (_observeFrame->isTrackingParent(frame()->id())) {
     bool *wasGoodDuringTracking = _observeFrame->refPixelWasGoodNoCreate();
 
@@ -550,7 +557,13 @@ bool DepthMap::observeDepthCreate(const int &x, const int &y, const int &idx,
 
   if (error < 0 || result_var > MAX_VAR)
     return false;
-  result_idepth = UNZERO(*iDepth);
+
+  if (Conf().doStereo) {
+    float *iDepth = _set->disparity.iDepth + idx;
+    result_idepth = UNZERO(*iDepth);
+  } else {
+    result_idepth = UNZERO(result_idepth);
+  }
 
   *target = DepthMapPixelHypothesis(result_idepth, result_var,
                                     VALIDITY_COUNTER_INITIAL_OBSERVE,
@@ -602,9 +615,14 @@ bool DepthMap::observeDepthUpdate(const int &x, const int &y, const int &idx,
   float result_idepth, result_var, result_eplLength;
 
   float prior_idepth = target->idepth_smoothed;
-  float *iDepth = _set->disparity.iDepth + idx;
-  uint8_t *iDepthValid = _set->disparity.iDepthValid + idx;
-  bool disparityValid = *iDepthValid;
+  // float *iDepth = _set->disparity.iDepth + idx;
+  bool disparityValid;
+  if (Conf().doStereo) {
+    uint8_t *iDepthValid = _set->disparity.iDepthValid + idx;
+    disparityValid = *iDepthValid;
+  } else {
+    disparityValid = true;
+  }
   float error =
       doLineStereo(x, y, epx, epy, min_idepth, prior_idepth, max_idepth,
                    _observeFrame.get(), _observeFrame->image(0), result_idepth,
