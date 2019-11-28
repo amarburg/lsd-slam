@@ -65,12 +65,22 @@ TrackingThread::TrackingThread(SlamSystem &system, bool threaded)
 TrackingThread::~TrackingThread() { ; }
 
 void TrackingThread::trackSetImpl(const std::shared_ptr<ImageSet> &set) {
+  LOG(WARNING) << "trackSetImpl_here";
   if (!_trackingIsGood) {
     // Prod mapping to check the relocalizer
 
-    //!!TODO.  Fix this
-    // _system._mapThread->relocalizer.updateCurrentFrame(set->refFrame());
-    // _system._mapThread->pushDoIteration();
+    //!!TODO.Fix this
+    if (!_system.mapThread()->relocalizer.isRunning)
+      _system.mapThread()->relocalizer.start(
+          _system.keyFrameGraph()->keyframesAll);
+
+    _system.mapThread()->relocalizer.updateCurrentFrame(set->refFrame());
+    bool relocResult = _system.mapThread()->relocalizer.waitResult(50);
+    LOG(WARNING) << "relocResult " << relocResult;
+    if (relocResult) {
+      takeRelocalizeResult(_system.mapThread()->relocalizer.getResult());
+    }
+    //_system.mapThread()->pushDoIteration();
 
     return;
   }
@@ -121,14 +131,13 @@ void TrackingThread::trackSetImpl(const std::shared_ptr<ImageSet> &set) {
     Sophus::SE3d otherToParentEstimate = otherToRef * updatedFrameToParent;
 
     LOG(DEBUG) << "Before tracking, estimate:\n"
-                 << otherToParentEstimate.matrix3x4();
+               << otherToParentEstimate.matrix3x4();
 
     LOG(DEBUG) << "Tracking frame 1...";
     SE3 updatedOtherToParent =
         _tracker->trackFrame(_currentKeyFrame, other, otherToParentEstimate);
 
-    LOG(DEBUG) << "After tracking, gets:\n"
-                 << updatedOtherToParent.matrix3x4();
+    LOG(DEBUG) << "After tracking, gets:\n" << updatedOtherToParent.matrix3x4();
   }
   if (Conf().doLeftRightStereo) {
     LOG(DEBUG) << "Propagating pose from refFrame to others in set";
@@ -137,7 +146,7 @@ void TrackingThread::trackSetImpl(const std::shared_ptr<ImageSet> &set) {
 
   tracking_lastResidual = _tracker->lastResidual;
   tracking_lastUsage = _tracker->pointUsage;
-
+  LOG(INFO) << "manualTrackingLossIndicated " << manualTrackingLossIndicated;
   if (manualTrackingLossIndicated || _tracker->diverged ||
       (_system.keyFrameGraph()->keyframesAll.size() >
            INITIALIZATION_PHASE_COUNT &&
@@ -175,7 +184,10 @@ void TrackingThread::trackSetImpl(const std::shared_ptr<ImageSet> &set) {
 
   // Push to mapping before checking if its the new keyframe
   _system.mapThread()->doMapSet(_currentKeyFrame, set);
-
+  LOG(DEBUG) << "_newKeyFramePending " << _newKeyFramePending;
+  LOG(DEBUG) << "numMappedOnThisTotal "
+             << _currentKeyFrame->numMappedOnThisTotal << " Min num"
+             << MIN_NUM_MAPPED;
   if (!_newKeyFramePending &&
       _currentKeyFrame->numMappedOnThisTotal > MIN_NUM_MAPPED) {
 
@@ -192,6 +204,8 @@ void TrackingThread::trackSetImpl(const std::shared_ptr<ImageSet> &set) {
         _system.trackableKeyFrameSearch()->getRefFrameScore(
             dist.dot(dist), _tracker->pointUsage);
 
+    LOG(DEBUG) << "lastTrackingClosenessScore " << lastTrackingClosenessScore
+               << " min val" << minVal;
     if (lastTrackingClosenessScore > minVal) {
       LOG(INFO) << "Telling mapping thread to make " << set->refFrame()->id()
                 << " the new keyframe.";
@@ -231,18 +245,14 @@ void TrackingThread::useNewKeyFrameImpl(const std::shared_ptr<KeyFrame> &kf) {
 // Need to add pushUnmappedTrackedFrame for image set
 void TrackingThread::takeRelocalizeResult(const RelocalizerResult &result) {
   LOG(WARNING) << "Entering takeRelocalizeResult";
-  // Frame* keyframe;
-  // int succFrameID;
-  // SE3 succFrameToKF_init;
-  // std::shared_ptr<Frame> succFrame;
-  //
-  // relocalizer.stop();
-  // relocalizer.getResult(keyframe, succFrame, succFrameID,
-  // succFrameToKF_init); assert(keyframe != 0);
+  int succFrameID;
+  SE3 succFrameToKF_init;
+  std::shared_ptr<Frame> succFrame;
 
-  // KeyFrame::SharedPtr keyframe( _currentKeyFrame );
-  // _trackingReference->importFrame( keyframe );
-  // _trackingReferenceFrameSharedPT = keyframe;
+  _system.mapThread()->relocalizer.stop();
+  //
+  // //_trackingReference->importFrame(keyframe);
+  // //_trackingReferenceFrameSharedPT = keyframe;
 
   _tracker->trackFrame(_currentKeyFrame, result.successfulFrame,
                        result.successfulFrameToKeyframe);
@@ -250,21 +260,20 @@ void TrackingThread::takeRelocalizeResult(const RelocalizerResult &result) {
   if (!_tracker->trackingWasGood ||
       _tracker->lastGoodCount() / (_tracker->lastGoodCount()) <
           1 - 0.75f * (1 - MIN_GOODPERGOODBAD_PIXEL)) {
-    LOG_IF(DEBUG, Conf().print.relocalizationInfo)
-        << "RELOCALIZATION FAILED BADLY! discarding result.";
+    LOG(DEBUG) << "RELOCALIZATION FAILED BADLY! discarding result.";
     //_trackingReference->invalidate();
   } else {
-    //_system.keyFrameGraph()->addFrame(result.successfulFrame );
+    // KeyFrame::SharedPtr kf(KeyFrame::Create(set));
+    KeyFrame::SharedPtr keyframe(KeyFrame::Create(result.successfulFrame));
+    _system.keyFrameGraph()->addKeyFrame(keyframe);
 
     // TODO commenting this out in the assumption I don't need it... need to
-    // revist _system.mapThread->pushUnmappedTrackedFrame(
-    // result.successfulFrame
-    //);
-
-    //{
-    //       std::lock_guard<std::mutex> lock( currentKeyFrameMutex );
+    // revist
+    //_system.mapThread()->pushUnmappedTrackedFrame(result.successfulFrame);
+    _newKeyFramePending = true;
+    //_system.mapThread()->doCreateNewKeyFrame(_currentKeyFrame, set);
+    // std::lock_guard<std::mutex> lock(currentKeyFrameMutex);
     // createNewKeyFrame = false;
     setTrackingIsGood();
-    //}
   }
 }

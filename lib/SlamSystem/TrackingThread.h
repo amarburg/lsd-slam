@@ -50,9 +50,12 @@ public:
 
   //== Calls into the thread ==
   void doTrackSet(const std::shared_ptr<ImageSet> &set) {
+
     if (_thread) {
+      LOG(WARNING) << "doTrack_set thread";
       _thread->send(std::bind(&TrackingThread::trackSetImpl, this, set));
     } else {
+      LOG(WARNING) << "doTrack_set";
       trackSetImpl(set);
     }
   }
@@ -81,8 +84,14 @@ public:
   float lastTrackingClosenessScore;
 
   bool trackingIsGood(void) const { return _trackingIsGood; }
-  bool setTrackingIsBad(void) { return _trackingIsGood = false; }
-  bool setTrackingIsGood(void) { return _trackingIsGood = true; }
+  bool setTrackingIsBad(void) {
+    LOG(DEBUG) << "Setting tracking bad";
+    return _trackingIsGood = false;
+  }
+  bool setTrackingIsGood(void) {
+    LOG(DEBUG) << "Setting tracking good";
+    return _trackingIsGood = true;
+  }
 
   struct PerformanceData {
     MsRateAverage track;
@@ -116,7 +125,6 @@ private:
   float tracking_lastGoodPerTotal;
 
   std::unique_ptr<active_object::Active> _thread;
-
 };
 
 } // namespace lsd_slam

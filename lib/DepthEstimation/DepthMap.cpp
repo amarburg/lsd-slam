@@ -61,9 +61,6 @@ DepthMap::DepthMap(const ImageSet::SharedPtr &set)
       useDisparity(true) {
   const size_t imgArea(Conf().slamImageSize.area());
 
-  // Conf().minAbsGradCreate = 2.0;
-  // Conf().minAbsGradDecrease = 2.0;
-
   trav_KF << 0, 0, 0;
 
   otherDepthMap = new DepthMapPixelHypothesis[imgArea];
