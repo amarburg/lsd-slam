@@ -31,7 +31,7 @@ Relocalizer::Relocalizer()
     : isRunning(false), KFForReloc(), nextRelocIDX(0), maxRelocIDX(0),
       continueRunning(false), hasResult(false), resultKF(nullptr),
       resultFrameID(0), resultFrameToKeyframe(SE3()),
-      _printRelocalizationInfo(false) {
+      _printRelocalizationInfo(true) {
   for (int i = 0; i < RELOCALIZE_THREADS; i++)
     running[i] = false;
 }
@@ -80,6 +80,7 @@ void Relocalizer::updateCurrentFrame(std::shared_ptr<Frame> currentFrame) {
 }
 
 void Relocalizer::start(std::vector<KeyFrame::SharedPtr> &allKeyframesList) {
+  LOG(DEBUG) << "Starting ReLoc";
   // make KFForReloc List
   KFForReloc.clear();
   for (unsigned int k = 0; k < allKeyframesList.size(); k++) {
@@ -109,6 +110,7 @@ void Relocalizer::start(std::vector<KeyFrame::SharedPtr> &allKeyframesList) {
 
 bool Relocalizer::waitResult(int milliseconds) {
   // std::lock_guard<std::mutex> lock(exMutex);
+  LOG(WARNING) << "has result " << hasResult;
   // if (hasResult)
   // return true;
 
@@ -140,6 +142,7 @@ void Relocalizer::threadLoop(int idx) {
   //	std::lock_guard<std::mutex> lock(exMutex);
   exMutex.lock();
   while (continueRunning) {
+    // LOG(DEBUG) << "isRunning " << isRunning;
     // if got something: do it (unlock in the meantime)
 
     if (nextRelocIDX < maxRelocIDX) {
@@ -162,6 +165,7 @@ void Relocalizer::threadLoop(int idx) {
                           (tracker->lastGoodCount() + tracker->lastBadCount());
       // LOG(WARNING) << "todoGoodVal " << todoGoodVal << " " <<
       // relocalizationTH;
+      // LOG(DEBUG) << "Relocalization thread";
       if (todoGoodVal > relocalizationTH) {
         int numGoodNeighbours = 0;
         int numBadNeighbours = 0;
@@ -195,13 +199,17 @@ void Relocalizer::threadLoop(int idx) {
           }
         }
 
+        // LOG(DEBUG) << "num good numbers " << numGoodNeighbours << "num bad "
+        //            << numBadNeighbours;
+
         if (numGoodNeighbours > numBadNeighbours || numGoodNeighbours >= 5) {
           if (_printRelocalizationInfo)
-            printf("RELOCALIZED! frame %d on %d (bestNeighbour %d): good "
-                   "%2.1f%%, usage %2.1f%%, GoodNeighbours %d / %d\n",
-                   myRelocFrame->id(), todo->id(), bestKF->id(),
-                   100 * bestNeightbourGoodVal, 100 * bestNeighbourUsage,
-                   numGoodNeighbours, numGoodNeighbours + numBadNeighbours);
+            LOGF(INFO,
+                 "RELOCALIZED! frame %d on %d (bestNeighbour %d): good "
+                 "%2.1f%%, usage %2.1f%%, GoodNeighbours %d / %d\n",
+                 myRelocFrame->id(), todo->id(), bestKF->id(),
+                 100 * bestNeightbourGoodVal, 100 * bestNeighbourUsage,
+                 numGoodNeighbours, numGoodNeighbours + numBadNeighbours);
 
           // set everything to stop!
           continueRunning = false;
@@ -212,14 +220,16 @@ void Relocalizer::threadLoop(int idx) {
           resultFrameToKeyframe = bestKFToFrame.inverse();
           resultReadySignal.notify_all();
           hasResult = true;
+          LOG(WARNING) << "has result " << hasResult;
           exMutex.unlock();
         } else {
           if (_printRelocalizationInfo)
-            printf("FAILED RELOCALIZE! frame %d on %d (bestNeighbour %d): good "
-                   "%2.1f%%, usage %2.1f%%, GoodNeighbours %d / %d\n",
-                   myRelocFrame->id(), todo->id(), bestKF->id(),
-                   100 * bestNeightbourGoodVal, 100 * bestNeighbourUsage,
-                   numGoodNeighbours, numGoodNeighbours + numBadNeighbours);
+            LOGF(INFO,
+                 "FAILED RELOCALIZE! frame %d on %d (bestNeighbour %d): good "
+                 "%2.1f%%, usage %2.1f%%, GoodNeighbours %d / %d\n",
+                 myRelocFrame->id(), todo->id(), bestKF->id(),
+                 100 * bestNeightbourGoodVal, 100 * bestNeighbourUsage,
+                 numGoodNeighbours, numGoodNeighbours + numBadNeighbours);
         }
       }
 

@@ -292,18 +292,17 @@ void SlamSystem::updateDisplayDepthMap() {
   }
 
 void SlamSystem::publishPose(const Sophus::Sim3f &pose) {
-  // Eigen::Matrix3f R = pose.rotationMatrix();
-  // Eigen::Vector3f T = pose.translation();
-  // R = q.toRotationMatrix().cast<float>();
-  //
-  // LOG(WARNING) << "R" << R;
-  // LOG(WARNING) << "T" << T;
+  Eigen::Matrix3f R = pose.rotationMatrix();
+  Eigen::Vector3f T = pose.translation();
+
+  LOG(DEBUG) << "Total rotation" << R;
+  LOG(DEBUG) << "Total translation" << T;
 
   OUTPUT_FOR_EACH(publishPose(pose))
 }
 
 void SlamSystem::publishTrackedFrame(const Frame::SharedPtr &frame) {
-  //OUTPUT_FOR_EACH(publishTrackedFrame(frame))
+  // OUTPUT_FOR_EACH(publishTrackedFrame(frame))
 }
 
 void SlamSystem::publishKeyframeGraph(void) {
@@ -311,19 +310,19 @@ void SlamSystem::publishKeyframeGraph(void) {
 }
 
 void SlamSystem::publishDepthImage(unsigned char *data) {
-  //OUTPUT_FOR_EACH(updateDepthImage(data))
+  // OUTPUT_FOR_EACH(updateDepthImage(data))
 }
 
 void SlamSystem::publishKeyframe(const Frame::SharedPtr &frame) {
-  //OUTPUT_FOR_EACH(publishKeyframe(frame))
+  // OUTPUT_FOR_EACH(publishKeyframe(frame))
 }
 
 void SlamSystem::publishCurrentKeyframe() {
   if (currentKeyFrame()) {
     LOG(DEBUG) << "Publishing keyframe " << currentKeyFrame()->id() << " at "
                << currentKeyFrame()->frame();
-    //OUTPUT_FOR_EACH(publishKeyframe(currentKeyFrame()->frame()))
-    //OUTPUT_FOR_EACH(publishPointCloud(currentKeyFrame()->frame()))
+    // OUTPUT_FOR_EACH(publishKeyframe(currentKeyFrame()->frame()))
+    // OUTPUT_FOR_EACH(publishPointCloud(currentKeyFrame()->frame()))
   } else {
     LOG(DEBUG) << "No currentKeyframe, unable to publish";
   }

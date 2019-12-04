@@ -354,6 +354,7 @@ void DepthMap::propagateFrom(const DepthMap::SharedPtr &other,
 }
 
 void DepthMap::finalize() {
+  // LOG(DEBUG) << "Depth map finalize";
   Timer timeAll;
 
   {

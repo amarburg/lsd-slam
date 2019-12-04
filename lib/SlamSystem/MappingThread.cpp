@@ -77,6 +77,22 @@ void MappingThread::createNewKeyFrameImplSet(
     const KeyFrame::SharedPtr &currentKeyFrame,
     const ImageSet::SharedPtr &set) {
   LOG(WARNING) << "Making " << set->refFrame()->id() << " into new keyframe!";
+  // finishCurrentKeyframe(currentKeyFrame);
+  currentKeyFrame->depthMap()->finalize();
+  if (currentKeyFrame->frame()->idxInKeyframes < 0) {
+    {
+      boost::shared_lock_guard<boost::shared_mutex> kfLock(
+          _system.keyFrameGraph()->keyframesAllMutex);
+      currentKeyFrame->frame()->idxInKeyframes =
+          _system.keyFrameGraph()->size();
+      // _system.keyFrameGraph()->keyframesAll.push_back(kf);
+    }
+    // {
+    //   boost::shared_lock_guard<boost::shared_mutex> kfLock(
+    //       _system.keyFrameGraph()->newKeyFrameMutex);
+    //   _system.keyFrameGraph()->newKeyFrames.push_back(kf);
+    // }
+  }
 
   CHECK(set->refFrame()->isTrackingParent(currentKeyFrame))
       << "New keyframe does not track on current keyframe!";
@@ -130,6 +146,23 @@ void MappingThread::mergeOptimizationOffsetImpl() {
   }
 
   optimizationUpdateMerged.notify();
+}
+
+void MappingThread::finishCurrentKeyframe(KeyFrame::SharedPtr &kf) {
+  kf->depthMap()->finalize();
+  if (kf->frame()->idxInKeyframes < 0) {
+    {
+      boost::shared_lock_guard<boost::shared_mutex> kfLock(
+          _system.keyFrameGraph()->keyframesAllMutex);
+      kf->frame()->idxInKeyframes = _system.keyFrameGraph()->size();
+      // _system.keyFrameGraph()->keyframesAll.push_back(kf);
+    }
+    // {
+    //   boost::shared_lock_guard<boost::shared_mutex> kfLock(
+    //       _system.keyFrameGraph()->newKeyFrameMutex);
+    //   _system.keyFrameGraph()->newKeyFrames.push_back(kf);
+    // }
+  }
 }
 
 } // namespace lsd_slam

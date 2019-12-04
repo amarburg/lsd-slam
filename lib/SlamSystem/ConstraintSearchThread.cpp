@@ -382,7 +382,8 @@ int ConstraintSearchThread::findConstraintsForNewKeyFrames(
       continue;
     }
     if (candidate->frame()->idxInKeyframes < INITIALIZATION_PHASE_COUNT) {
-      LOG(DEBUG) << "Candiate idx is less than INITIALIZATION_PHASE_COUNT";
+      LOG(DEBUG) << "Candiate idx is less than INITIALIZATION_PHASE_COUNT: "
+                 << candidate->frame()->idxInKeyframes;
       continue;
     }
 

@@ -254,7 +254,7 @@ void TrackingThread::takeRelocalizeResult(const RelocalizerResult &result) {
   // //_trackingReference->importFrame(keyframe);
   // //_trackingReferenceFrameSharedPT = keyframe;
 
-  _tracker->trackFrame(_currentKeyFrame, result.successfulFrame,
+  _tracker->trackFrame(result.keyframe, result.successfulFrame,
                        result.successfulFrameToKeyframe);
 
   if (!_tracker->trackingWasGood ||
@@ -263,14 +263,19 @@ void TrackingThread::takeRelocalizeResult(const RelocalizerResult &result) {
     LOG(DEBUG) << "RELOCALIZATION FAILED BADLY! discarding result.";
     //_trackingReference->invalidate();
   } else {
+    LOG(DEBUG) << "GOOD RELOCALIZATION!";
     // KeyFrame::SharedPtr kf(KeyFrame::Create(set));
-    KeyFrame::SharedPtr keyframe(KeyFrame::Create(result.successfulFrame));
-    _system.keyFrameGraph()->addKeyFrame(keyframe);
+    // KeyFrame::SharedPtr keyframe(KeyFrame::Create(result.successfulFrame));
+    _currentKeyFrame = result.keyframe;
+    //_currentFrame = result.successfulFrame;
+    //_system.keyFrameGraph()->addKeyFrame(keyframe);
+
+    _latestGoodPoseCamToWorld = _currentKeyFrame->pose()->getCamToWorld();
 
     // TODO commenting this out in the assumption I don't need it... need to
     // revist
     //_system.mapThread()->pushUnmappedTrackedFrame(result.successfulFrame);
-    _newKeyFramePending = true;
+    _newKeyFramePending = false;
     //_system.mapThread()->doCreateNewKeyFrame(_currentKeyFrame, set);
     // std::lock_guard<std::mutex> lock(currentKeyFrameMutex);
     // createNewKeyFrame = false;
