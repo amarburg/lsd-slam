@@ -34,6 +34,7 @@ public:
   // Create the first (uninitialized) keyframe
   // void createFirstKeyFrame(const Frame::SharedPtr &frame);
   void createFirstKeyFrame(const ImageSet::SharedPtr &set);
+  void updateCurrentSet(const ImageSet::SharedPtr &set);
 
   // The core MapThread function, update the DepthMap with the contents of _set_
   void doMapSet(const KeyFrame::SharedPtr &kf, const ImageSet::SharedPtr &set) {

@@ -711,14 +711,21 @@ bool ConstraintSearchThread::testConstraint(
             "FAILED err_level3 > 3000");
 
     e1_out = e2_out = 0;
+    try {
+      LOG(DEBUG) << "inserting keyframe failed: ";
+      keyframe->trackingFailed.insert(std::pair<KeyFrame::SharedPtr, Sim3>(
+          candidate, candidateToFrame_initialEstimate));
+      LOG(DEBUG) << "exiting keyframe failed: ";
 
-    keyframe->trackingFailed.insert(std::pair<KeyFrame::SharedPtr, Sim3>(
-        candidate, candidateToFrame_initialEstimate));
+    } catch (std::out_of_range outofrange) {
+      LOG(DEBUG) << "caught exception: " << outofrange.what();
+    }
     return false;
   }
 
   float err_level2 =
       tryTrackSim3(keyframe, candidate, 2, 2, USESSE, FtoC, CtoF);
+  LOG(DEBUG) << "err_level2" << err_level2;
 
   if (err_level2 > 4000 * strictness) {
     // LOGF_IF(DEBUG, Conf().print.constraintSearchInfo,
@@ -740,7 +747,7 @@ bool ConstraintSearchThread::testConstraint(
 
   float err_level1 = tryTrackSim3(keyframe, candidate, 1, 1, USESSE, FtoC, CtoF,
                                   e1_out, e2_out);
-
+  LOG(DEBUG) << "err_level1" << err_level1;
   if (err_level1 > 6000 * strictness) {
     // LOGF_IF(DEBUG, Conf().print.constraintSearchInfo,
     //         "FAILED %d -> %d (lvl %d): errs (%.1f / %.1f / %.1f).",

@@ -92,6 +92,9 @@ void Relocalizer::start(std::vector<KeyFrame::SharedPtr> &allKeyframesList) {
     // }
     // std::cout << itr << std::endl;
     // KFForReloc.insert(itr, allKeyframesList[k]);
+    LOG(DEBUG) << "Key frame pose. Id: " << allKeyframesList[k]->id()
+               << " Pose: "
+               << allKeyframesList[k]->pose()->getCamToWorld().matrix3x4();
     KFForReloc.push_back(allKeyframesList[k]);
   }
   nextRelocIDX = 0;

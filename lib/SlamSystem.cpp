@@ -118,6 +118,7 @@ void SlamSystem::nextImageSet(const std::shared_ptr<ImageSet> &set) {
 
   if (!_initialized) {
     LOG(WARNING) << " ~~ First frame, initializing system";
+    setCamera(set->cam);
     _mapThread->createFirstKeyFrame(set);
     _initialized = true;
     return;

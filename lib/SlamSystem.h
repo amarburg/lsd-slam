@@ -136,6 +136,9 @@ public:
     return _constraintThread;
   }
 
+  void setCamera(libvideoio::Camera camera) { _camera = camera; }
+  libvideoio::Camera getCamera() { return _camera; }
+
 private:
   struct PerformanceData {
     MsRateAverage findReferences;
@@ -161,6 +164,8 @@ private:
   // == Shared "global" data structures ==
   std::shared_ptr<KeyFrameGraph> _keyFrameGraph; // has own locks
   std::shared_ptr<TrackableKeyFrameSearch> _trackableKeyFrameSearch;
+
+  libvideoio::Camera _camera;
 };
 
 } // namespace lsd_slam

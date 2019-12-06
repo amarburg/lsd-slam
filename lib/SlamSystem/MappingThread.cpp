@@ -59,6 +59,13 @@ void MappingThread::createFirstKeyFrame(const ImageSet::SharedPtr &set) {
   _system.trackingThread()->doUseNewKeyFrame(kf);
 }
 
+void MappingThread::updateCurrentSet(const ImageSet::SharedPtr &set) {
+  LOG(WARNING) << "Making " << set->refFrame()->id() << " into new keyframe!";
+  KeyFrame::SharedPtr kf(KeyFrame::Create(set));
+  _system.keyFrameGraph()->addKeyFrame(kf);
+  _system.trackingThread()->doUseNewKeyFrame(kf);
+}
+
 // void MappingThread::createNewKeyFrameImpl(
 //     const KeyFrame::SharedPtr &currentKeyFrame, const Frame::SharedPtr
 //     &frame) {

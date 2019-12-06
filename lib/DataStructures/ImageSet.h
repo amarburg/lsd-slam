@@ -86,6 +86,8 @@ public:
 
   boost::shared_mutex setMutex;
 
+  libvideoio::Camera cam;
+
   typedef std::shared_ptr<ImageSet> SharedPtr;
 
 private:

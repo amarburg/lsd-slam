@@ -6,7 +6,7 @@ namespace lsd_slam {
 
 ImageSet::ImageSet(unsigned int id, const cv::Mat &img,
                    const libvideoio::Camera &cam)
-    : _refFrame(0) {
+    : _refFrame(0), cam(cam) {
   _frames.push_back(
       std::make_shared<Frame>(id, cam, img.size(), 0.0, img.data));
   _se3ToRef.push_back(Sophus::SE3d());
@@ -43,7 +43,7 @@ void ImageSet::setFrameToRef(const int frame, const Sophus::SE3d &frameToRef) {
 }
 
 void ImageSet::setRectificationMatrix(const Eigen::Matrix3f R) {
-refFrame()->setRectificationMatrix(R);
+  refFrame()->setRectificationMatrix(R);
 }
 
 void ImageSet::setDisparityMap(float *_iDepth, uint8_t *_iDepthValid,

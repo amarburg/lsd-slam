@@ -89,6 +89,12 @@ void TrackingThread::trackSetImpl(const std::shared_ptr<ImageSet> &set) {
   LOG_IF(DEBUG, Conf().print.threadingInfo)
       << "TRACKING frame " << set->refFrame()->id() << " onto ref. "
       << _currentKeyFrame->id();
+  if (set->refFrame()->id() > 10) {
+    LOG_IF(DEBUG, Conf().print.threadingInfo)
+        << "KEYFRAME pose "
+        << _currentKeyFrame->pose()->getCamToWorld().matrix3x4() << "for ID "
+        << _currentKeyFrame->id();
+  }
 
   SE3 frameToParentEstimate =
       se3FromSim3(_currentKeyFrame->pose()->getCamToWorld().inverse() *
@@ -169,6 +175,9 @@ void TrackingThread::trackSetImpl(const std::shared_ptr<ImageSet> &set) {
   }
   _latestGoodPoseCamToWorld = set->refFrame()->pose->getCamToWorld();
 
+  LOG(DEBUG) << "_latestGoodPoseCamToWorld: "
+             << _latestGoodPoseCamToWorld.matrix3x4();
+
   LOG_IF(DEBUG, Conf().print.threadingInfo) << "Publishing tracked frame";
   _system.publishTrackedFrame(set->refFrame());
   _system.publishPose(set->refFrame()->getCamToWorld().cast<float>());
@@ -209,7 +218,12 @@ void TrackingThread::trackSetImpl(const std::shared_ptr<ImageSet> &set) {
     if (lastTrackingClosenessScore > minVal) {
       LOG(INFO) << "Telling mapping thread to make " << set->refFrame()->id()
                 << " the new keyframe.";
+      _currentKeyFrame->setKeyFramePose(
+          _currentKeyFrame->pose()->getCamToWorld());
 
+      LOG_IF(DEBUG, Conf().print.threadingInfo)
+          << "new KEYFRAME pose promotion for id: " << _currentKeyFrame->id()
+          << " " << _currentKeyFrame->pose()->getCamToWorld().matrix3x4();
       _newKeyFramePending = true;
       _system.mapThread()->doCreateNewKeyFrame(_currentKeyFrame, set);
 
@@ -267,10 +281,23 @@ void TrackingThread::takeRelocalizeResult(const RelocalizerResult &result) {
     // KeyFrame::SharedPtr kf(KeyFrame::Create(set));
     // KeyFrame::SharedPtr keyframe(KeyFrame::Create(result.successfulFrame));
     _currentKeyFrame = result.keyframe;
-    //_currentFrame = result.successfulFrame;
-    //_system.keyFrameGraph()->addKeyFrame(keyframe);
+    ImageSet::SharedPtr set = std::make_shared<ImageSet>(
+        result.successfulFrame->id(), result.successfulFrame->getCvImage(),
+        _system.getCamera());
+    _tracker->trackFrame(_currentKeyFrame, set->refFrame(),
+                         result.successfulFrameToKeyframe);
+    _system.mapThread()->doCreateNewKeyFrame(_currentKeyFrame, set);
+    // _currentFrame = result.successfulFrame;
+    // //_system.keyFrameGraph()->addKeyFrame(keyframe);
+    // LOG(DEBUG) << "key frame pose. Id: " << _currentKeyFrame->id() << "
+    // Pose:
+    // "
+    //            << _currentKeyFrame->pose()->getCamToWorld().matrix3x4();
+    // LOG(DEBUG) << "new frame pose. Id: " << _currentFrame->id()
+    //            << " Pose: " <<
+    //            _currentFrame->getCamToWorld().matrix3x4();
 
-    _latestGoodPoseCamToWorld = _currentKeyFrame->pose()->getCamToWorld();
+    //_latestGoodPoseCamToWorld = _currentFrame->getCamToWorld();
 
     // TODO commenting this out in the assumption I don't need it... need to
     // revist

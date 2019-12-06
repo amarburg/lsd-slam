@@ -35,6 +35,9 @@ public:
     return _trackingReference;
   }
 
+  void setKeyFramePose(Sim3 pose) { _keyframePoseToWorld = pose; }
+  Sim3 getKeyFramePose() { return _keyframePoseToWorld; }
+
   //== Depth maintenance functions ==
   void updateDepthFrom(const Frame::SharedPtr &frame);
   void updateDepthFrom(const ImageSet::SharedPtr &set);
@@ -63,6 +66,7 @@ private:
   Frame::SharedPtr _frame;
   DepthMap::SharedPtr _depthMap;
   TrackingReference::SharedPtr _trackingReference;
+  Sim3 _keyframePoseToWorld;
 };
 
 } // namespace lsd_slam
