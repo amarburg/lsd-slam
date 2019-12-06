@@ -284,6 +284,9 @@ void DepthMap::propagateFrom(const DepthMap::SharedPtr &other,
   {
     Timer time;
     propagateDepthFromSet(other, rescaleFactor);
+    if (Conf().doStereo) {
+      updateFromStereo();
+    }
     _perf.propagate.update(time);
   }
 
@@ -987,6 +990,26 @@ void DepthMap::propagateDepthFromSet(const DepthMap::SharedPtr &other,
           runningStats.num_prop_occluded, runningStats.num_prop_color_decreased,
           runningStats.num_prop_grad_decreased);
 } // namespace lsd_slam
+
+void DepthMap::updateFromStereo() {
+  float *iDepth = _set->disparity.iDepth;
+  uint8_t *iDepthValid = _set->disparity.iDepthValid;
+  const float *maxGradients = frame()->maxGradients();
+  for (int y = 0; y < Conf().slamImageSize.height; y++) {
+    for (int x = 0; x < Conf().slamImageSize.width; x++) {
+      bool valid = *iDepthValid;
+      int idx = x + y * Conf().slamImageSize.width;
+      if (maxGradients[idx] > Conf().minAbsGradCreate && valid) {
+        float idepth = *iDepth;
+        currentDepthMap[idx] = DepthMapPixelHypothesis(
+            idepth, idepth, VAR_RANDOM_INIT_INITIAL, VAR_RANDOM_INIT_INITIAL,
+            20, Conf().debugDisplay);
+      }
+      iDepth++;
+      iDepthValid++;
+    }
+  }
+}
 
 void DepthMap::regularizeDepthMapFillHoles() {
 

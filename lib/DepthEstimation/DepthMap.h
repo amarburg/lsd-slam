@@ -151,6 +151,7 @@ private:
   // new_keyframe
   void propagateDepthFromSet(const DepthMap::SharedPtr &new_keyframe,
                              float &rescaleFactor);
+  void updateFromStereo();
 
   // This is a local state variable used to share data between the observeDepth*
   // functions.  Sucks, I know
