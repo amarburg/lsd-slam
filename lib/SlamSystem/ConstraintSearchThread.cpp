@@ -711,9 +711,12 @@ bool ConstraintSearchThread::testConstraint(
             "FAILED err_level3 > 3000");
 
     e1_out = e2_out = 0;
-
-    keyframe->trackingFailed.insert(std::pair<KeyFrame::SharedPtr, Sim3>(
-        candidate, candidateToFrame_initialEstimate));
+    try {
+      keyframe->trackingFailed.insert(std::pair<KeyFrame::SharedPtr, Sim3>(
+          candidate, candidateToFrame_initialEstimate));
+    } catch (const std::exception &e) {
+      LOG(WARNING) << e.what();
+    }
     return false;
   }
 
@@ -730,8 +733,12 @@ bool ConstraintSearchThread::testConstraint(
             "FAILED err_level2 > 4000");
 
     e1_out = e2_out = 0;
-    keyframe->trackingFailed.insert(std::pair<KeyFrame::SharedPtr, Sim3>(
-        candidate, candidateToFrame_initialEstimate));
+    try {
+      keyframe->trackingFailed.insert(std::pair<KeyFrame::SharedPtr, Sim3>(
+          candidate, candidateToFrame_initialEstimate));
+    } catch (const std::exception &e) {
+      LOG(WARNING) << e.what();
+    }
     return false;
   }
 
@@ -754,8 +761,12 @@ bool ConstraintSearchThread::testConstraint(
     delete e1_out;
     delete e2_out;
     e1_out = e2_out = 0;
-    keyframe->trackingFailed.insert(std::pair<KeyFrame::SharedPtr, Sim3>(
-        candidate, candidateToFrame_initialEstimate));
+    try {
+      keyframe->trackingFailed.insert(std::pair<KeyFrame::SharedPtr, Sim3>(
+          candidate, candidateToFrame_initialEstimate));
+    } catch (const std::exception &e) {
+      LOG(WARNING) << e.what();
+    }
     return false;
   }
 
