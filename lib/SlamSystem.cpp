@@ -301,6 +301,26 @@ void SlamSystem::publishPose(const Sophus::Sim3f &pose) {
   OUTPUT_FOR_EACH(publishPose(pose))
 }
 
+void SlamSystem::publishTwist(const Sophus::SE3d &currentPose,
+                              const Sophus::SE3d &prevPose, double timediff) {
+
+  Eigen::Vector3d transMotion =
+      (prevPose.translation() - currentPose.translation()) / timediff;
+  Eigen::Vector3d rot1 =
+      prevPose.unit_quaternion().toRotationMatrix().eulerAngles(0, 1, 2);
+  Eigen::Vector3d rot2 =
+      currentPose.unit_quaternion().toRotationMatrix().eulerAngles(0, 1, 2);
+
+  Eigen::Vector3d rotMotion = (rot1 - rot2) / timediff;
+  Eigen::Quaterniond q;
+  q = Eigen::AngleAxisd(rotMotion(0), Eigen::Vector3d::UnitX()) *
+      Eigen::AngleAxisd(rotMotion(1), Eigen::Vector3d::UnitY()) *
+      Eigen::AngleAxisd(rotMotion(2), Eigen::Vector3d::UnitZ());
+  Sophus::SE3d motion(q, transMotion);
+
+  OUTPUT_FOR_EACH(publishTwist(motion))
+}
+
 void SlamSystem::publishTrackedFrame(const Frame::SharedPtr &frame,
                                      SE3 frameToParentEstimate) {
   Eigen::Matrix4f G = frameToWorld();

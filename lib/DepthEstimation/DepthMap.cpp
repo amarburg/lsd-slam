@@ -138,7 +138,7 @@ void DepthMap::initializeFromStereo() {
         // if (valid) {
         //   depthImg.at<float>(y, x) = *iDepth;
         // }
-        if (maxGradients[idx] > Conf().minAbsGradCreate || valid) {
+        if (maxGradients[idx] > Conf().minAbsGradCreate && valid) {
           float idepth = *iDepth;
           currentDepthMap[idx] = DepthMapPixelHypothesis(
               idepth, idepth, VAR_RANDOM_INIT_INITIAL, VAR_RANDOM_INIT_INITIAL,
@@ -511,10 +511,10 @@ void DepthMap::observeDepthRow(int yMin, int yMax, RunningStats *stats) {
       bool success;
       if (!hasHypothesis && valid) {
         // if (valid) {
-        // success = observeDepthCreate(x, y, idx, stats);
+        success = observeDepthCreate(x, y, idx, stats);
         // success = createNewStereoDepthPoint(x, y, idx, stats);
       } else if (hasHypothesis) {
-        // success = observeDepthUpdate(x, y, idx, keyFrameMaxGradBuf, stats);
+        success = observeDepthUpdate(x, y, idx, keyFrameMaxGradBuf, stats);
       }
       if (success)
         successes++;
@@ -1028,7 +1028,7 @@ void DepthMap::updateFromStereo() {
     for (int x = 0; x < Conf().slamImageSize.width; x++) {
       bool valid = *iDepthValid;
       int idx = x + y * Conf().slamImageSize.width;
-      if (maxGradients[idx] > Conf().minAbsGradCreate || valid) {
+      if (maxGradients[idx] > Conf().minAbsGradCreate && valid) {
         float idepth = *iDepth;
         currentDepthMap[idx] = DepthMapPixelHypothesis(
             idepth, idepth, VAR_RANDOM_INIT_INITIAL, VAR_RANDOM_INIT_INITIAL,
