@@ -138,7 +138,7 @@ void DepthMap::initializeFromStereo() {
         // if (valid) {
         //   depthImg.at<float>(y, x) = *iDepth;
         // }
-        if (maxGradients[idx] > Conf().minAbsGradCreate && valid) {
+        if (maxGradients[idx] > Conf().minAbsGradCreate || valid) {
           float idepth = *iDepth;
           currentDepthMap[idx] = DepthMapPixelHypothesis(
               idepth, idepth, VAR_RANDOM_INIT_INITIAL, VAR_RANDOM_INIT_INITIAL,
@@ -464,10 +464,12 @@ void DepthMap::observeDepthRow(int yMin, int yMax, RunningStats *stats) {
       int idx = x + y * Conf().slamImageSize.width;
       uint8_t *iDepthValid;
       bool valid;
+      float *iDepth;
 
       if (Conf().doStereo) {
         iDepthValid = _set->disparity.iDepthValid + idx;
         valid = *iDepthValid;
+        iDepth = _set->disparity.iDepth + idx;
       } else {
         valid = true;
       }
@@ -478,21 +480,41 @@ void DepthMap::observeDepthRow(int yMin, int yMax, RunningStats *stats) {
         debugGradientImg.at<float>(y, x) = 1.0;
 
       // ======== 1. check absolute grad =========
-      if (hasHypothesis &&
-          keyFrameMaxGradBuf[idx] < Conf().minAbsGradDecrease) {
+      if (!hasHypothesis &&
+          keyFrameMaxGradBuf[idx] < Conf().minAbsGradDecrease && !valid) {
         target->isValid = false;
         continue;
       }
-      if (keyFrameMaxGradBuf[idx] < Conf().minAbsGradCreate ||
-          target->blacklisted < MIN_BLACKLIST)
+      if (target->blacklisted < MIN_BLACKLIST)
         continue;
+      if (keyFrameMaxGradBuf[idx] < Conf().minAbsGradCreate && !valid) {
+        continue;
+      }
+
+      // if (valid) {
+      //   target->idepth = UNZERO(*iDepth);
+      //   float id_var = target->idepth_var * SUCC_VAR_INC_FAC;
+      //   float w = VAR_RANDOM_INIT_INITIAL / (VAR_RANDOM_INIT_INITIAL +
+      //   id_var); id_var = id_var * w; if (id_var < target->idepth_var)
+      //     target->idepth_var = id_var;
+      //   target->validity_counter += VALIDITY_COUNTER_INC;
+      //   float absGrad = keyFrameMaxGradBuf[idx];
+      //   if (target->validity_counter >
+      //       VALIDITY_COUNTER_MAX +
+      //           absGrad * (VALIDITY_COUNTER_MAX_VARIABLE) / 255.0f)
+      //     target->validity_counter =
+      //         VALIDITY_COUNTER_MAX +
+      //         absGrad * (VALIDITY_COUNTER_MAX_VARIABLE) / 255.0f;
+      //   stats->num_observe_addSkip++;
+      // }
 
       bool success;
       if (!hasHypothesis && valid) {
-        success = observeDepthCreate(x, y, idx, stats);
+        // if (valid) {
+        // success = observeDepthCreate(x, y, idx, stats);
         // success = createNewStereoDepthPoint(x, y, idx, stats);
       } else if (hasHypothesis) {
-        success = observeDepthUpdate(x, y, idx, keyFrameMaxGradBuf, stats);
+        // success = observeDepthUpdate(x, y, idx, keyFrameMaxGradBuf, stats);
       }
       if (success)
         successes++;
@@ -702,6 +724,7 @@ bool DepthMap::observeDepthUpdate(const int &x, const int &y, const int &idx,
 
     return false;
   } else {
+    float *iDepth = _set->disparity.iDepth + idx;
     // one more successful observation!
     stats->num_observe_good++;
     stats->num_observe_updated++;
@@ -715,6 +738,12 @@ bool DepthMap::observeDepthUpdate(const int &x, const int &y, const int &idx,
 
     float w = result_var / (result_var + id_var);
     float new_idepth = (1 - w) * result_idepth + w * target->idepth;
+    uint8_t *iDepthValid;
+    iDepthValid = _set->disparity.iDepthValid + idx;
+    bool valid = *iDepthValid;
+    if (valid)
+      // std::cout << *iDepth << " " << new_idepth << std::endl;
+      new_idepth = *iDepth;
     LOG_IF(WARNING, std::isnan(new_idepth) && target->isValid)
         << "Trying to update a DepthHypothesis, but it's NaN";
 
@@ -999,7 +1028,7 @@ void DepthMap::updateFromStereo() {
     for (int x = 0; x < Conf().slamImageSize.width; x++) {
       bool valid = *iDepthValid;
       int idx = x + y * Conf().slamImageSize.width;
-      if (maxGradients[idx] > Conf().minAbsGradCreate && valid) {
+      if (maxGradients[idx] > Conf().minAbsGradCreate || valid) {
         float idepth = *iDepth;
         currentDepthMap[idx] = DepthMapPixelHypothesis(
             idepth, idepth, VAR_RANDOM_INIT_INITIAL, VAR_RANDOM_INIT_INITIAL,
@@ -1775,9 +1804,9 @@ inline float DepthMap::doLineStereo(
                ((didSubpixel ? 0.05f : 0.5f) * sampleDist * sampleDist +
                 geoDispError + photoDispError); // square to make variance
 
-  // LOG(DEBUG) << "result_var: " << u << "," << v << " alpha: " << alpha << ";
-  // sampleDist: " << sampleDist << "; geoDispError: " << geoDispError << ";
-  // photoDispError: " << photoDispError;
+  // LOG(DEBUG) << "result_var: " << u << "," << v << " alpha: " << alpha <<
+  // "; sampleDist: " << sampleDist << "; geoDispError: " << geoDispError <<
+  // "; photoDispError: " << photoDispError;
 
   if (Conf().plot.debugStereo) {
     if (rand() % 5 == 0) {
