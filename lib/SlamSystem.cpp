@@ -301,8 +301,12 @@ void SlamSystem::publishPose(const Sophus::Sim3f &pose) {
   OUTPUT_FOR_EACH(publishPose(pose))
 }
 
-void SlamSystem::publishTrackedFrame(const Frame::SharedPtr &frame) {
-  // OUTPUT_FOR_EACH(publishTrackedFrame(frame))
+void SlamSystem::publishTrackedFrame(const Frame::SharedPtr &frame,
+                                     SE3 frameToParentEstimate) {
+  Eigen::Matrix4f G = frameToWorld();
+  OUTPUT_FOR_EACH(
+      publishTrackedFrame(frame, currentKeyFrame()->frame(), G.inverse(),
+                          currentKeyFrame()->depthMap(), frameToParentEstimate))
 }
 
 void SlamSystem::publishKeyframeGraph(void) {
@@ -329,6 +333,7 @@ void SlamSystem::publishCurrentKeyframe() {
 }
 
 void SlamSystem::publishCurrentFrame() {
+  // LOG(WARNING) << "PublishingCurrentFrame";
   if (currentKeyFrame()) {
     Eigen::Matrix4f G = frameToWorld();
     OUTPUT_FOR_EACH(publishFrame(currentKeyFrame()->frame(), G.inverse(),

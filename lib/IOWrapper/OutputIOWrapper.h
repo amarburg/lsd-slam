@@ -60,6 +60,12 @@ public:
   // depth data)
   virtual void publishTrackedFrame(const Frame::SharedPtr &kf) = 0;
 
+  virtual void publishTrackedFrame(const Frame::SharedPtr &frame,
+                                   const Frame::SharedPtr &kf,
+                                   const Eigen::MatrixXf G,
+                                   const DepthMap::SharedPtr &depthMap,
+                                   SE3 &frameToParentEstimate) = 0;
+
   // publishes graph and all constraints, as well as updated KF poses.
   virtual void
   publishTrajectory(std::vector<Eigen::Matrix<float, 3, 1>> trajectory,

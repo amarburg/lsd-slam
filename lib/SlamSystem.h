@@ -107,7 +107,8 @@ public:
   }
 
   void publishPose(const Sophus::Sim3f &pose);
-  void publishTrackedFrame(const Frame::SharedPtr &frame);
+  void publishTrackedFrame(const Frame::SharedPtr &frame,
+                           SE3 frameToParentEstimate);
   void publishKeyframeGraph(void);
   void publishKeyframe(const Frame::SharedPtr &frame);
   void publishCurrentKeyframe();
