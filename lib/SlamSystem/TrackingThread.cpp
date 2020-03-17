@@ -170,7 +170,7 @@ void TrackingThread::trackSetImpl(const std::shared_ptr<ImageSet> &set) {
   _latestGoodPoseCamToWorld = set->refFrame()->pose->getCamToWorld();
 
   LOG_IF(DEBUG, Conf().print.threadingInfo) << "Publishing tracked frame";
-  _system.publishTrackedFrame(set->refFrame());
+  _system.publishTrackedFrame(set->refFrame(), frameToParentEstimate);
   _system.publishPose(set->refFrame()->getCamToWorld().cast<float>());
   _currentFrame = set->refFrame();
 
