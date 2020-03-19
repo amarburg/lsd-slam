@@ -29,6 +29,10 @@
 #include "Tracking/Relocalizer.h"
 #include "util/MovingAverage.h"
 
+// #include <Eigen/core>
+
+#include <chrono>
+
 namespace lsd_slam {
 
 class SlamSystem;
@@ -110,6 +114,9 @@ private:
 
   void useNewKeyFrameImpl(const std::shared_ptr<KeyFrame> &kf);
 
+  Eigen::Matrix<float, 6, 1> calculateMotion(Sophus::Sim3f p1,
+                                             Sophus::Sim3f p2);
+
   bool _trackingIsGood;
   bool _newKeyFramePending;
 
@@ -117,6 +124,8 @@ private:
   Frame::SharedPtr _currentFrame;
 
   Sim3 _latestGoodPoseCamToWorld;
+  std::chrono::high_resolution_clock::time_point _latestTime =
+      std::chrono::high_resolution_clock::now();
 
   // // ============= SHARED ENTITIES =============
   float tracking_lastResidual;

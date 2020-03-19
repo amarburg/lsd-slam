@@ -84,6 +84,7 @@ void TrackingThread::trackSetImpl(const std::shared_ptr<ImageSet> &set) {
 
     return;
   }
+  LOG(INFO) << "Pre tracking pose " << _latestGoodPoseCamToWorld.matrix3x4();
 
   // DO TRACKING & Show tracking result.
   LOG_IF(DEBUG, Conf().print.threadingInfo)
@@ -167,12 +168,35 @@ void TrackingThread::trackSetImpl(const std::shared_ptr<ImageSet> &set) {
     manualTrackingLossIndicated = false;
     return;
   }
+  std::chrono::duration<double, std::milli> duration =
+      _latestTime - std::chrono::high_resolution_clock::now();
+
+  double elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+                       std::chrono::system_clock::now() - _latestTime)
+                       .count() /
+                   1000.0;
+
+  LOG(INFO) << "elapsed " << elapsed;
+
+  Eigen::Matrix<float, 6, 1> motion =
+      calculateMotion(set->refFrame()->pose->getCamToWorld().cast<float>(),
+                      _latestGoodPoseCamToWorld.cast<float>());
+  motion /= elapsed;
+
+  LOG(INFO) << "motion: " << std::endl << motion;
+
+  // SE3 _motion = se3FromSim3(set->refFrame()->pose->getCamToWorld()) -
+  //               se3FromSim3(_latestGoodPoseCamToWorld);
+
   _latestGoodPoseCamToWorld = set->refFrame()->pose->getCamToWorld();
+  _latestTime = std::chrono::system_clock::now();
 
   LOG_IF(DEBUG, Conf().print.threadingInfo) << "Publishing tracked frame";
   _system.publishTrackedFrame(set->refFrame(), frameToParentEstimate);
   _system.publishPose(set->refFrame()->getCamToWorld().cast<float>());
   _currentFrame = set->refFrame();
+  //
+  LOG(INFO) << "Post tracking pose " << _latestGoodPoseCamToWorld.matrix3x4();
 
   // Keyframe selection
   LOG(INFO) << "Tracked " << set->id() << " against keyframe "
@@ -236,6 +260,24 @@ void TrackingThread::useNewKeyFrameImpl(const std::shared_ptr<KeyFrame> &kf) {
   LOG(DEBUG) << "Using " << kf->id() << " as new keyframe";
   _newKeyFramePending = false;
   _currentKeyFrame = kf;
+}
+
+Eigen::Matrix<float, 6, 1> TrackingThread::calculateMotion(Sophus::Sim3f p1,
+                                                           Sophus::Sim3f p2) {
+  Eigen::Matrix3f R1 = p1.rotationMatrix();
+  Eigen::Vector3f T1 = p1.translation();
+  Eigen::Vector3f angles1 = R1.eulerAngles(2, 1, 0);
+
+  Eigen::Matrix3f R2 = p2.rotationMatrix();
+  Eigen::Vector3f T2 = p2.translation();
+  Eigen::Vector3f angles2 = R2.eulerAngles(2, 1, 0);
+
+  Eigen::Vector3f tanslation = T2 - T1;
+  Eigen::Vector3f rotation = angles2 - angles1;
+
+  Eigen::Matrix<float, 6, 1> motion;
+  motion.block<3, 1>(0, 0) = tanslation;
+  motion.block<3, 1>(3, 0) = rotation;
 }
 
 // n.b. this function will be called from the mapping thread.  Ensure
