@@ -72,6 +72,9 @@ public:
     return _se3ToRef[frameNum];
   }
 
+  void setOdomMotionEstimate(Eigen::Vector3f linear, Eigen::Vector3f angular);
+  bool odomEstimateSet() { return _odomEstimateSet; }
+
   Sim3 getRefTransformation() { return _frames[_refFrame]->getCamToWorld(); }
   void setReferenceFrame(const unsigned int &frameNum) { _refFrame = frameNum; }
   unsigned int id() { return _frameId; }
@@ -93,6 +96,8 @@ private:
   unsigned int _frameId;
   std::vector<Frame::SharedPtr> _frames;
   std::vector<Sophus::SE3d> _se3ToRef;
+  Eigen::Matrix<float, 6, 1> _odomEstimate;
+  bool _odomEstimateSet = false;
 
   // float *_disparityMap;
 };

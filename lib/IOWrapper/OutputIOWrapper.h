@@ -40,7 +40,9 @@ public:
 
   virtual void publishPose(const Sophus::Sim3f &pose) = 0;
 
-  virtual void publishTwist(const Sophus::SE3d &twist) = 0;
+  virtual void
+  publishStateEstimation(const Eigen::Matrix<float, 6, 1> motion,
+                         const Eigen::Matrix<float, 6, 1> acceleration) = 0;
 
   virtual void
   publishKeyframeGraph(const std::shared_ptr<KeyFrameGraph> &graph) = 0;
