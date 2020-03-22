@@ -179,15 +179,23 @@ void TrackingThread::trackSetImpl(const std::shared_ptr<ImageSet> &set) {
   LOG(INFO) << "elapsed " << elapsed;
 
   Eigen::Matrix<float, 6, 1> motion =
-      calculateMotion(set->refFrame()->pose->getCamToWorld().cast<float>(),
-                      _latestGoodPoseCamToWorld.cast<float>());
+      calculateVelocity(_latestGoodPoseCamToWorld.cast<float>(),
+                        set->refFrame()->pose->getCamToWorld().cast<float>());
   motion /= elapsed;
+
+  Eigen::Matrix<float, 6, 1> acceleration =
+      calculateAcceleration(_latestGoodMotion, motion);
+  acceleration /= elapsed;
+  _latestGoodMotion = motion;
+
+  _system.publishStateEstimation(motion, acceleration);
 
   LOG(INFO) << "motion: " << std::endl << motion;
 
   // SE3 _motion = se3FromSim3(set->refFrame()->pose->getCamToWorld()) -
   //               se3FromSim3(_latestGoodPoseCamToWorld);
 
+  // TODO here's why the EKF addition will go
   _latestGoodPoseCamToWorld = set->refFrame()->pose->getCamToWorld();
   _latestTime = std::chrono::system_clock::now();
 
@@ -262,8 +270,8 @@ void TrackingThread::useNewKeyFrameImpl(const std::shared_ptr<KeyFrame> &kf) {
   _currentKeyFrame = kf;
 }
 
-Eigen::Matrix<float, 6, 1> TrackingThread::calculateMotion(Sophus::Sim3f p1,
-                                                           Sophus::Sim3f p2) {
+Eigen::Matrix<float, 6, 1> TrackingThread::calculateVelocity(Sophus::Sim3f p1,
+                                                             Sophus::Sim3f p2) {
   Eigen::Matrix3f R1 = p1.rotationMatrix();
   Eigen::Vector3f T1 = p1.translation();
   Eigen::Vector3f angles1 = R1.eulerAngles(2, 1, 0);
@@ -271,13 +279,27 @@ Eigen::Matrix<float, 6, 1> TrackingThread::calculateMotion(Sophus::Sim3f p1,
   Eigen::Matrix3f R2 = p2.rotationMatrix();
   Eigen::Vector3f T2 = p2.translation();
   Eigen::Vector3f angles2 = R2.eulerAngles(2, 1, 0);
+  LOG(INFO) << "R2: " << std::endl << R2;
+  LOG(INFO) << "angles2: " << std::endl << angles2;
 
   Eigen::Vector3f tanslation = T2 - T1;
-  Eigen::Vector3f rotation = angles2 - angles1;
+  Eigen::Vector3f rotation;
+  rotation(0) = angles2(2) - angles1(2);
+  rotation(1) = angles2(1) - angles1(1);
+  rotation(2) = angles2(0) - angles1(0);
 
   Eigen::Matrix<float, 6, 1> motion;
   motion.block<3, 1>(0, 0) = tanslation;
   motion.block<3, 1>(3, 0) = rotation;
+
+  return motion;
+}
+
+Eigen::Matrix<float, 6, 1>
+TrackingThread::calculateAcceleration(Eigen::Matrix<float, 6, 1> m1,
+                                      Eigen::Matrix<float, 6, 1> m2) {
+
+  return m2 - m1;
 }
 
 // n.b. this function will be called from the mapping thread.  Ensure

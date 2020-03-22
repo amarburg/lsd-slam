@@ -107,8 +107,8 @@ public:
   }
 
   void publishPose(const Sophus::Sim3f &pose);
-  void publishTwist(const Sophus::SE3d &currentPose,
-                    const Sophus::SE3d &prevPose, double timediff);
+  void publishStateEstimation(const Eigen::Matrix<float, 6, 1> motion,
+                              const Eigen::Matrix<float, 6, 1> acceleration);
   void publishTrackedFrame(const Frame::SharedPtr &frame,
                            SE3 frameToParentEstimate);
   void publishKeyframeGraph(void);

@@ -11,6 +11,7 @@ ImageSet::ImageSet(unsigned int id, const cv::Mat &img,
       std::make_shared<Frame>(id, cam, img.size(), 0.0, img.data));
   _se3ToRef.push_back(Sophus::SE3d());
   _frameId = id;
+  _odomEstimate = Eigen::Matrix<float, 6, 1>::Zero(6, 1);
 }
 
 ImageSet::ImageSet(unsigned int id, const std::vector<cv::Mat> &imgs,
@@ -43,7 +44,7 @@ void ImageSet::setFrameToRef(const int frame, const Sophus::SE3d &frameToRef) {
 }
 
 void ImageSet::setRectificationMatrix(const Eigen::Matrix3f R) {
-refFrame()->setRectificationMatrix(R);
+  refFrame()->setRectificationMatrix(R);
 }
 
 void ImageSet::setDisparityMap(float *_iDepth, uint8_t *_iDepthValid,
@@ -85,6 +86,13 @@ void ImageSet::propagatePoseFromRefFrame() {
     // aren't running through the tracker
     thisFrame->initialTrackedResidual = refFrame()->initialTrackedResidual;
   }
+}
+
+void ImageSet::setOdomMotionEstimate(Eigen::Vector3f linear,
+                                     Eigen::Vector3f angular) {
+  _odomEstimate.block<3, 1>(0, 0) = linear;
+  _odomEstimate.block<3, 1>(3, 0) = angular;
+  _odomEstimateSet = true;
 }
 
 } // namespace lsd_slam
