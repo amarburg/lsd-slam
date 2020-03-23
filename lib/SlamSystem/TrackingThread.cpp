@@ -56,6 +56,7 @@ TrackingThread::TrackingThread(SlamSystem &system, bool threaded)
       _thread(threaded ? Active::createActive() : NULL),
       _currentFrame(nullptr) {
   // Do not use more than 4 levels for odometry tracking
+  LOG(INFO) << "PYRAMID_LEVELS" << PYRAMID_LEVELS;
   for (int level = 4; level < PYRAMID_LEVELS; ++level)
     _tracker->settings.maxItsPerLvl[level] = 0;
 

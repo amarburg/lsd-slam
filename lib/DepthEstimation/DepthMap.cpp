@@ -123,14 +123,13 @@ void DepthMap::initializeFromStereo() {
                    CV_32FC1);
   cv::Mat img = _set->refFrame()->getCvImage();
   if (iDepthSize == Conf().slamImageSize.height * Conf().slamImageSize.width) {
-
+    LOG(INFO) << "Initalizing depth map from stereo";
     float *iDepth = _set->disparity.iDepth;
     uint8_t *iDepthValid = _set->disparity.iDepthValid;
     float iDepthMean = _set->disparity.iDepthMean;
     activeKeyFrameIsReactivated = false;
 
     const float *maxGradients = frame()->maxGradients();
-    std::vector<float> idepth_vector;
     for (int y = 0; y < Conf().slamImageSize.height; y++) {
       for (int x = 0; x < Conf().slamImageSize.width; x++) {
         bool valid = *iDepthValid;
@@ -752,7 +751,7 @@ bool DepthMap::observeDepthUpdate(const int &x, const int &y, const int &idx,
       // If sufficient motion has occured (specified by the user), add
       // points determined by LSD SLAM that are NOT valid in the disparity map
       target->idepth = UNZERO(new_idepth);
-      // debugDepthImg.at<float>(y, x) = new_idepth * 100;
+      debugDepthImg.at<float>(y, x) = new_idepth * 100;
     }
 
     // else if (disparityValid && useDisparity) {
@@ -760,7 +759,7 @@ bool DepthMap::observeDepthUpdate(const int &x, const int &y, const int &idx,
       // Always add disparity map points when in left image, never in right
       target->idepth = UNZERO(new_idepth);
       // if (Conf().displayDepthMap)
-      // debugDepthImg.at<float>(y, x) = new_idepth * 100;
+      debugDepthImg.at<float>(y, x) = new_idepth * 100;
     }
     id_var = id_var * w;
     if (id_var < target->idepth_var)
