@@ -172,10 +172,10 @@ void TrackingThread::trackSetImpl(const std::shared_ptr<ImageSet> &set) {
   std::chrono::duration<double, std::milli> duration =
       _latestTime - std::chrono::high_resolution_clock::now();
 
-  double elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
-                       std::chrono::system_clock::now() - _latestTime)
-                       .count() /
-                   1000.0;
+  float elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+                      std::chrono::system_clock::now() - _latestTime)
+                      .count() /
+                  1000.0;
 
   LOG(INFO) << "elapsed " << elapsed;
 
@@ -190,8 +190,6 @@ void TrackingThread::trackSetImpl(const std::shared_ptr<ImageSet> &set) {
   _latestGoodMotion = motion;
 
   _system.publishStateEstimation(motion, acceleration);
-
-  LOG(INFO) << "motion: " << std::endl << motion;
 
   // SE3 _motion = se3FromSim3(set->refFrame()->pose->getCamToWorld()) -
   //               se3FromSim3(_latestGoodPoseCamToWorld);
