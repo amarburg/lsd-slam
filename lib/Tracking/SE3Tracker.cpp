@@ -610,17 +610,11 @@ float SE3Tracker::calcResidualAndBuffers(const Eigen::Vector3f *refPoint,
     if (!(u_new > 1 && v_new > 1 && u_new < w - 2 && v_new < h - 2)) {
       if (isGoodOutBuffer != 0)
         isGoodOutBuffer[*idxBuf] = false;
-      // LOG(INFO) << "Ref point: " << (*refPoint)[0] << " " << (*refPoint)[1]
-      //           << " " << (*refPoint)[2];
-      // LOG(INFO) << "Wxp :" << Wxp[0] << " " << Wxp[1] << " " << Wxp[2]
-      //           << " maps to " << u_new << " " << v_new;
-      // LOG(INFO) << "w, h" << w << " , " << h;
 
-      // LOG_IF(DEBUG, loop < 50) << "Ref point: " << (*refPoint)[0] << " "
-      //                          << (*refPoint)[1] << " " << (*refPoint)[2];
-      // LOG_IF(DEBUG, loop < 50) << "Wxp :" << Wxp[0] << " " << Wxp[1] << " "
-      //                          << Wxp[2] << "maps to " << u_new << " " <<
-      //                          v_new;
+      //			LOG_IF(DEBUG, loop < 50) << "Ref point: " <<
+      //(*refPoint)[0] << " " << (*refPoint)[1] << " " << (*refPoint)[2];
+      //			LOG_IF(DEBUG, loop < 50) << "Wxp :" << Wxp[0] <<
+      //" " << Wxp[1] << " " << Wxp[2] << " maps to " << u_new << " " << v_new;
       continue;
     }
 
@@ -703,12 +697,9 @@ float SE3Tracker::calcResidualAndBuffers(const Eigen::Vector3f *refPoint,
   _lastBadCount = badCount;
   lastMeanRes = sumSignedRes / goodCount;
 
-  // LOG_IF(INFO, Conf().print.trackingIterationInfo)
-  LOG_IF(INFO, true) << "loop: " << loop
-                     << " buf_warped_size = " << buf_warped_size
-                     << "; goodCount = " << goodCount
-                     << "; badCount = " << badCount
-                     << "; refPoint_max = " << *refPoint_max;
+  LOG_IF(DEBUG, Conf().print.trackingIterationInfo)
+      << "loop: " << loop << " buf_warped_size = " << buf_warped_size
+      << "; goodCount = " << goodCount << "; badCount = " << badCount;
   // if( buf_warped_size == 0 ) {
   // 		LOG(DEBUG) << "Trap!";
   // }
