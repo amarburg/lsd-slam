@@ -338,6 +338,8 @@ void SlamSystem::publishTrackedFrame(const Frame::SharedPtr &frame,
 
 void SlamSystem::publishKeyframeGraph(void) {
   OUTPUT_FOR_EACH(publishKeyframeGraph(keyFrameGraph()))
+  OUTPUT_FOR_EACH(publishOptimizedPoseEstimate(
+      currentKeyFrame()->frame()->getCamToWorld().cast<float>()))
 }
 
 void SlamSystem::publishDepthImage(unsigned char *data) {

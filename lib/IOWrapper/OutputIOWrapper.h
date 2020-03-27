@@ -55,6 +55,8 @@ public:
   virtual void publishFrame(const Frame::SharedPtr &kf,
                             const Eigen::MatrixXf G) = 0;
 
+  virtual void publishOptimizedPoseEstimate(const Sophus::Sim3f &pose) = 0;
+
   virtual void publishFrame(const Frame::SharedPtr &kf, const Eigen::MatrixXf G,
                             const DepthMap::SharedPtr &depthMap) = 0;
 

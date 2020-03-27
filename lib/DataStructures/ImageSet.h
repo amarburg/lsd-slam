@@ -72,6 +72,8 @@ public:
     return _se3ToRef[frameNum];
   }
 
+  Sophus::SE3f getOdomEstimate();
+
   void setOdomMotionEstimate(Eigen::Vector3f linear, Eigen::Vector3f angular);
   bool odomEstimateSet() { return _odomEstimateSet; }
 

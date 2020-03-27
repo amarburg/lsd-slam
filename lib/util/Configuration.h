@@ -107,6 +107,8 @@ public:
   bool doImageSharpen;
   int saturationKernelSize;
 
+  float max_motion;
+
   struct PrintConfiguration {
     PrintConfiguration();
 

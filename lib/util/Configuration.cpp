@@ -29,7 +29,7 @@ Configuration::Configuration()
       useRectificationFrame(false), displayInputFusedImage(false),
       minAbsGradCreate(1), minAbsGradDecrease(1), displayInputImage(false),
       pointcloudSize(1.0), print(), plot(), doImageSharpen(false),
-      saturationKernelSize(3) {}
+      saturationKernelSize(3), max_motion(10) {}
 
 const ImageSize &Configuration::setSlamImageSize(const ImageSize &sz) {
   CHECK(sz.width % 16 == 0 && sz.height % 16 == 0)

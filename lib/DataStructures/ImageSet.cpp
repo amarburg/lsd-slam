@@ -95,4 +95,20 @@ void ImageSet::setOdomMotionEstimate(Eigen::Vector3f linear,
   _odomEstimateSet = true;
 }
 
+Sophus::SE3f ImageSet::getOdomEstimate() {
+  Eigen::AngleAxisf rollAngle(_odomEstimate(3), Eigen::Vector3f::UnitX());
+  Eigen::AngleAxisf pitchAngle(_odomEstimate(4), Eigen::Vector3f::UnitY());
+  Eigen::AngleAxisf yawAngle(_odomEstimate(5), Eigen::Vector3f::UnitZ());
+
+  Eigen::Quaternion<float> q = rollAngle * pitchAngle * yawAngle;
+
+  Eigen::Matrix3f R = q.matrix();
+
+  Eigen::Matrix4f G = Eigen::Matrix4f::Identity();
+  G.block<3, 3>(0, 0) = R;
+  G.block<3, 1>(0, 3) = _odomEstimate.block<3, 1>(0, 0);
+
+  return Sophus::SE3f(G);
+}
+
 } // namespace lsd_slam

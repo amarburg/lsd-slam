@@ -127,6 +127,7 @@ private:
   Frame::SharedPtr _currentFrame;
 
   Sim3 _latestGoodPoseCamToWorld;
+  Sim3 _latestGoodPoseFrameToParent;
 
   Eigen::Matrix<float, 6, 1> _latestGoodMotion;
 
