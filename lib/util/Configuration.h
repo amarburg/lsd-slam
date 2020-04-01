@@ -46,6 +46,10 @@ public:
   bool doKFReActivation;
   bool doMapping;
   bool continuousPCOutput;
+  bool useEkf;
+  bool syncDisparityImage;
+
+  int refFrame;
 
   // settings variables
   // controlled via keystrokes

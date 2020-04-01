@@ -12,7 +12,7 @@ Configuration &Conf() {
 Configuration::Configuration()
     : doStereo(true), runRealTime(true), doDepth(NO_STEREO),
       stopOnFailedRead(true), SLAMEnabled(true), doKFReActivation(true),
-      doMapping(true), continuousPCOutput(true),
+      doMapping(true), continuousPCOutput(true), refFrame(1),
 
       debugDisplay(2), displayDepthMap(false), displayGradientMap(false),
       onSceenInfoDisplay(true), dumpMap(false), doFullReConstraintTrack(false),
@@ -29,7 +29,8 @@ Configuration::Configuration()
       useRectificationFrame(false), displayInputFusedImage(false),
       minAbsGradCreate(1), minAbsGradDecrease(1), displayInputImage(false),
       pointcloudSize(1.0), print(), plot(), doImageSharpen(false),
-      saturationKernelSize(3), max_motion(10) {}
+      saturationKernelSize(3), max_motion(10), useEkf(false),
+      syncDisparityImage(false) {}
 
 const ImageSize &Configuration::setSlamImageSize(const ImageSize &sz) {
   CHECK(sz.width % 16 == 0 && sz.height % 16 == 0)
