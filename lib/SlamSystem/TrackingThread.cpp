@@ -111,6 +111,11 @@ void TrackingThread::trackSetImpl(const std::shared_ptr<ImageSet> &set) {
         _currentKeyFrame, set->refFrame(), frameToParentEstimate,
         frameToParentEstimate, baseGradientTracked,
         baseGradientTrackingWasGood);
+
+    float elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+                        std::chrono::system_clock::now() - _latestTime)
+                        .count() /
+                    1000.0;
     if (abs(set->getOdomEstimate().cast<double>().matrix3x4()(0, 3)) < 0.1 &&
         abs(set->getOdomEstimate().cast<double>().matrix3x4()(1, 3)) < 0.1 &&
         abs(set->getOdomEstimate().cast<double>().matrix3x4()(2, 3)) < 0.1 &&
@@ -123,7 +128,7 @@ void TrackingThread::trackSetImpl(const std::shared_ptr<ImageSet> &set) {
     } else {
       _tracker->updateTrack(_currentKeyFrame, set->refFrame(),
                             baseGradientTracked, base_residual,
-                            odomTrackingWasGood);
+                            baseGradientTrackingWasGood);
       _latestGoodPoseFrameToParent =
           sim3FromSE3(baseGradientTracked.cast<double>());
     }
@@ -134,37 +139,41 @@ void TrackingThread::trackSetImpl(const std::shared_ptr<ImageSet> &set) {
         baseGradientTrackingWasGood);
     _tracker->updateTrack(_currentKeyFrame, set->refFrame(),
                           baseGradientTracked, base_residual,
-                          odomTrackingWasGood);
+                          baseGradientTrackingWasGood);
 
     _latestGoodPoseFrameToParent =
         sim3FromSE3(baseGradientTracked.cast<double>());
   }
-  sim3FromSE3(frameToParentEstimate);
-  sim3FromSE3(baseGradientTracked);
 
-  Eigen::Matrix<float, 6, 1> motion =
-      calculateVelocity(sim3FromSE3(frameToParentEstimate).cast<float>(),
-                        sim3FromSE3(baseGradientTracked).cast<float>());
+  if (baseGradientTrackingWasGood) {
+    // LOG(INFO) << "previous: " <<
+    // sim3FromSE3(frameToParentEstimate).matrix3x4(); LOG(INFO) << "new: " <<
+    // sim3FromSE3(baseGradientTracked).matrix3x4();
 
-  std::chrono::duration<double, std::milli> duration =
-      _latestTime - std::chrono::high_resolution_clock::now();
+    Eigen::Matrix<float, 6, 1> motion =
+        calculateVelocity(sim3FromSE3(frameToParentEstimate).cast<float>(),
+                          sim3FromSE3(baseGradientTracked).cast<float>());
 
-  float elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
-                      std::chrono::system_clock::now() - _latestTime)
-                      .count() /
-                  1000.0;
+    std::chrono::duration<double, std::milli> duration =
+        _latestTime - std::chrono::high_resolution_clock::now();
 
-  motion /= elapsed;
+    float elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+                        std::chrono::system_clock::now() - _latestTime)
+                        .count() /
+                    1000.0;
 
-  LOG(INFO) << "motion: \n" << motion;
+    motion /= elapsed;
 
-  Eigen::Matrix<float, 6, 1> acceleration =
-      calculateAcceleration(_latestGoodMotion, motion);
-  acceleration /= elapsed;
-  _latestGoodMotion = motion;
+    // LOG(INFO) << "motion: \n" << motion;
 
-  if (motion.norm() < Conf().max_motion) {
-    _system.publishStateEstimation(motion, acceleration);
+    Eigen::Matrix<float, 6, 1> acceleration =
+        calculateAcceleration(_latestGoodMotion, motion);
+    acceleration /= elapsed;
+    _latestGoodMotion = motion;
+
+    if (motion.norm() < Conf().max_motion) {
+      _system.publishStateEstimation(motion, acceleration);
+    }
   }
 
   _latestGoodPoseCamToWorld = set->refFrame()->pose->getCamToWorld();

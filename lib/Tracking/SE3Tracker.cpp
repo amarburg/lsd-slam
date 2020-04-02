@@ -750,10 +750,6 @@ float SE3Tracker::trackGradient(const std::shared_ptr<KeyFrame> &keyframe,
 
     reference->makePointCloud(lvl);
 
-    LOG(INFO) << "Calculating initial residual on frame " << frame->id()
-              << ", level " << lvl << " against reference frame "
-              << reference->frameID() << " with " << reference->numData[lvl]
-              << " points";
     callOptimized(
         calcResidualAndBuffers,
         (reference->posData[lvl], reference->colorAndVarData[lvl],
@@ -766,8 +762,8 @@ float SE3Tracker::trackGradient(const std::shared_ptr<KeyFrame> &keyframe,
                               (_imgSize.height >> lvl)) {
       diverged = true;
       trackingWasGood = false;
-      LOG(INFO) << "Diverged at level " << lvl << "!  Only " << buf_warped_size
-                << " pixel to track.";
+      LOG(WARNING) << "Diverged at level " << lvl << "!  Only "
+                   << buf_warped_size << " pixel to track.";
       _trackingWasGood = false;
     }
 
@@ -921,6 +917,8 @@ float SE3Tracker::trackGradient(const std::shared_ptr<KeyFrame> &keyframe,
                     _pctGoodPerGoodBad > MIN_GOODPERGOODBAD_PIXEL;
 
   gradientTracked = referenceToFrame.cast<double>().inverse();
+
+  _trackingWasGood = true;
 
   return lastResidual / pointUsage;
 }
