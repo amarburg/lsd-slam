@@ -36,40 +36,41 @@ public:
 
   enum { NO_STEREO = 0, STEREO_ZED } doDepth;
 
-  bool doStereo;
-
   // If false, system will block while each new image is tracked and mapped
   bool runRealTime;
 
+  // LSD-SALM params
   bool stopOnFailedRead;
   bool SLAMEnabled;
   bool doKFReActivation;
   bool doMapping;
   bool continuousPCOutput;
-  bool useEkf;
-  bool publishSetPose;
-  bool syncDisparityImage;
 
-  int refFrame;
+  // Filtering Params
+  bool useEkf;         // To use EKF odom data, if provided
+  bool publishSetPose; // Publish 'set_pose', i.e. odom estimate at loop clousre
 
-  // settings variables
-  // controlled via keystrokes
+  // Stereo Params
+  bool doStereo; // Stereo or Mono LSD-SLAM
+  int refFrame;  // Left (0) or right(1) image as refrence frame
+  bool doSubpixelStereo;
+  bool doLeftRightStereo; // To propegate a new LSD-SLAM estimate with right
+                          // image
+
+  // display variables
   int debugDisplay;
   bool displayDepthMap;
   bool displayInputFusedImage;
   bool displayInputImage;
   bool displayGradientMap;
 
-  bool onSceenInfoDisplay;
-  bool dumpMap;
-  bool doFullReConstraintTrack;
-
-  bool doSubpixelStereo;
-  bool doLeftRightStereo;
+  bool syncDisparityImage; // To sync disprity image to left image or to have
+                           // images sync
 
   // Variables to control depth mapping
-  float minVirtualBaselineLength;
-  bool suppressLSDPoints;
+  float minVirtualBaselineLength; // Minimum motion between frames
+  bool suppressLSDPoints; // To calculate LSD points or just use disparity
+                          // estimates
 
   // Stereo and gradient calculations
   float minEplLengthCrop, maxEplLengthCrop;
@@ -98,9 +99,10 @@ public:
   bool setnearSupport;
   float sparisityFactor;
   bool setsparisityFactor;
-
+  bool onSceenInfoDisplay;
+  bool dumpMap;
+  bool doFullReConstraintTrack;
   bool useVarianceFiltering;
-
   bool useVoxelFilter;
   float pclLeafSize;
 
