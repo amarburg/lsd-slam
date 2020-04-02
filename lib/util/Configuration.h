@@ -47,6 +47,7 @@ public:
   bool doMapping;
   bool continuousPCOutput;
   bool useEkf;
+  bool publishSetPose;
   bool syncDisparityImage;
 
   int refFrame;

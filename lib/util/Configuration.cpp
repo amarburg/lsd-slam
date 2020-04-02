@@ -17,7 +17,7 @@ Configuration::Configuration()
       debugDisplay(2), displayDepthMap(false), displayGradientMap(false),
       onSceenInfoDisplay(true), dumpMap(false), doFullReConstraintTrack(false),
 
-      doSubpixelStereo(true), doLeftRightStereo(false),
+      doSubpixelStereo(true), doLeftRightStereo(false), publishSetPose(false),
 
       minVirtualBaselineLength(0.001), suppressLSDPoints(false),
 
