@@ -1,15 +1,28 @@
-pipeline:
-  build:
-    image: amarburg/lsdslam-dev-host:latest
-    pull:  true
-    commands:
-          - ./fips set config linux-make-unittest
-          - ./fips build
+kind: pipeline
+type: docker
+name: build
 
-  slack:
-    image: plugins/slack
-    secrets: [ slack_webhook ]
-    when:
-      status:
-        - success
-        - failure
+platform:
+  os: linux
+  arch: amd64
+
+steps:
+- name: build-fips-unittest
+  image: amarburg/lsdslam-dev-host
+  commands:
+    - ./fips set config linux-make-unittest
+    - ./fips build
+
+- name: build-fips-release-unittest
+  image: amarburg/lsdslam-dev-host
+  commands:
+    - ./fips set config linux-make-release-unittest
+    - ./fips build
+
+- name: slack
+  image: plugins/slack
+  settings:
+    webhook:
+      from_secret: slack_webhook
+  when:
+    status: [ success, failure ]
