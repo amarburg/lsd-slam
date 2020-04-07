@@ -1,8 +1,8 @@
 
 #include <gtest/gtest.h>
 
-#include "libvideoio/Camera.h"
-#include "libvideoio/ImageSize.h"
+#include "libvideoio/types/Camera.h"
+#include "libvideoio/types/ImageSize.h"
 
 #include "DataStructures/Frame.h"
 
@@ -32,12 +32,12 @@ TEST( FrameDeathTest, NotDivisibleBy16 ) {
     const int width = 248;
     const int height = 256;
     lsd_slam::Frame frame( 1, cam, libvideoio::ImageSize( width, height), 0.0, (float *)nullptr );
-  }, "std::exception");  //"Image width \\d* isn't divisible by \\d*" );
+  }, "std::bad_function_call");  //"Image width \\d* isn't divisible by \\d*" );
 
   ASSERT_DEATH({
     const int width = 256;
     const int height = 2248;
     lsd_slam::Frame frame( 1, cam, libvideoio::ImageSize( width, height), 0.0, (float *)nullptr );
-  }, "std::exception" ); //"Image height \\d* isn't divisible by \\d*" );
+  }, "std::bad_function_call" ); //"Image height \\d* isn't divisible by \\d*" );
 
 }

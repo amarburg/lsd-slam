@@ -9,8 +9,8 @@
 
 #include "SophusUtil.h"
 
-#include <libvideoio/ImageSize.h>
-#include <libvideoio/Camera.h>
+#include <libvideoio/types/ImageSize.h>
+#include <libvideoio/types/Camera.h>
 
 #pragma once
 

@@ -5,7 +5,7 @@
 #include <string>
 #include <array>
 
-#include "libvideoio/ImageSize.h"
+#include "libvideoio/types/ImageSize.h"
 
 typedef unsigned char BYTE;
 

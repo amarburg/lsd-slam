@@ -23,7 +23,7 @@
 
 #include "DataStructures/Frame.h"
 #include "util/SophusUtil.h"
-#include <libvideoio/Camera.h>
+#include <libvideoio/types/Camera.h>
 
 namespace lsd_slam {
 

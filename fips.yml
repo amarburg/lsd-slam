@@ -3,6 +3,8 @@ imports:
         git: https://github.com/amarburg/fips-googletest.git
     libvideoio:
         git: https://github.com/apl-ocean-engineering/libvideoio.git
+    libvideoio-types:
+        git: https://github.com/apl-ocean-engineering/libvideoio-types.git
     libg3logger:
         git: https://github.com/apl-ocean-engineering/libg3logger.git
     g2o-fips:

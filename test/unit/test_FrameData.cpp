@@ -1,8 +1,8 @@
 
 #include <gtest/gtest.h>
 
-#include "libvideoio/Camera.h"
-#include "libvideoio/ImageSize.h"
+#include "libvideoio/types/Camera.h"
+#include "libvideoio/types/ImageSize.h"
 
 #include "DataStructures/FrameData.h"
 
