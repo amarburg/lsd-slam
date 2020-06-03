@@ -110,9 +110,6 @@ void KeyFrame::updateDepthFrom(const ImageSet::SharedPtr &set) {
          "keyframe (%d).  While this should work, it is not recommended.",
          id(), refFrame->id(), refFrame->trackingParent()->id());
   }
-
-  LOG(WARNING) << "Updating depth in KF " << id() << " from frame "
-             << refFrame->id();
   if (!_depthMap->updateDepthFrom(refFrame, true)) {
     // TODO Handle error.  Have to disambiguiate between an error and "baseline
     // too short, didn't update"

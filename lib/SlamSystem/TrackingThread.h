@@ -56,10 +56,8 @@ public:
   void doTrackSet(const std::shared_ptr<ImageSet> &set) {
 
     if (_thread) {
-      LOG(WARNING) << "doTrack_set thread";
       _thread->send(std::bind(&TrackingThread::trackSetImpl, this, set));
     } else {
-      LOG(WARNING) << "doTrack_set";
       trackSetImpl(set);
     }
   }
