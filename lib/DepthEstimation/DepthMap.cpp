@@ -159,14 +159,12 @@ void DepthMap::initializeFromStereo() {
 								iDepthValid++;
 						}
 				}
-				LOG(INFO) << "correctCount, failCout";
-				LOG(INFO) << correctCount << " " << failCout;
+				// LOG(INFO) << "correctCount, failCout";
+				// LOG(INFO) << correctCount << " " << failCout;
 		} else {
 				LOG(WARNING) << "No disparity map found";
 		}
 		// cv::imshow("img", img);
-		cv::imshow("depthImg", depthImg);
-		cv::waitKey(1);
 }
 
 void DepthMap::initializeRandomly() {
