@@ -50,280 +50,323 @@ using namespace lsd_slam;
 using active_object::Active;
 
 TrackingThread::TrackingThread(SlamSystem &system, bool threaded)
-    : _system(system), _perf(), _tracker(new SE3Tracker(Conf().slamImageSize)),
-      _trackingIsGood(true), _newKeyFramePending(false),
-      _latestGoodPoseCamToWorld(), _latestGoodPoseFrameToParent(),
-      _thread(threaded ? Active::createActive() : NULL),
-      _currentFrame(nullptr) {
-  // Do not use more than 4 levels for odometry tracking
-  for (int level = 4; level < PYRAMID_LEVELS; ++level)
-    _tracker->settings.maxItsPerLvl[level] = 0;
+		: _system(system), _perf(), _tracker(new SE3Tracker(Conf().slamImageSize)),
+		_trackingIsGood(true), _newKeyFramePending(false),
+		_latestGoodPoseCamToWorld(), _latestGoodPoseFrameToParent(),
+		_thread(threaded ? Active::createActive() : NULL),
+		_currentFrame(nullptr) {
+		// Do not use more than 4 levels for odometry tracking
+		for (int level = 4; level < PYRAMID_LEVELS; ++level)
+				_tracker->settings.maxItsPerLvl[level] = 0;
 
-  lastTrackingClosenessScore = 0;
+		lastTrackingClosenessScore = 0;
 }
 
-TrackingThread::~TrackingThread() { ; }
+TrackingThread::~TrackingThread() {
+		;
+}
 
 void TrackingThread::trackSetImpl(const std::shared_ptr<ImageSet> &set) {
-  if (!_trackingIsGood) {
-    if (!_system.mapThread()->relocalizer.isRunning)
-      _system.mapThread()->relocalizer.start(
-          _system.keyFrameGraph()->keyframesAll);
+		if (!_trackingIsGood) {
+				if (!_system.mapThread()->relocalizer.isRunning)
+						_system.mapThread()->relocalizer.start(
+								_system.keyFrameGraph()->keyframesAll);
 
-    _system.mapThread()->relocalizer.updateCurrentFrame(set->refFrame());
-    bool relocResult = _system.mapThread()->relocalizer.waitResult(50);
+				_system.mapThread()->relocalizer.updateCurrentFrame(set->refFrame());
+				bool relocResult = _system.mapThread()->relocalizer.waitResult(50);
 
-    if (relocResult) {
-      takeRelocalizeResult(_system.mapThread()->relocalizer.getResult());
-    }
-    return;
-  }
+				if (relocResult) {
+						takeRelocalizeResult(_system.mapThread()->relocalizer.getResult());
+				}
+				return;
+		}
 
-  LOG_IF(DEBUG, Conf().print.threadingInfo)
-      << "TRACKING frame " << set->refFrame()->id() << " onto ref. "
-      << _currentKeyFrame->id();
+		LOG_IF(DEBUG, Conf().print.threadingInfo)
+		        << "TRACKING frame " << set->refFrame()->id() << " onto ref. "
+		        << _currentKeyFrame->id();
 
-  SE3 frameToParentEstimate =
-      se3FromSim3(_currentKeyFrame->pose()->getCamToWorld().inverse() *
-                  _latestGoodPoseCamToWorld);
+		SE3 frameToParentEstimate =
+				se3FromSim3(_currentKeyFrame->pose()->getCamToWorld().inverse() *
+				            _latestGoodPoseCamToWorld);
 
-  bool use_odom = true;
+		bool use_odom = true;
 
-  Timer timer;
+		Timer timer;
 
-  LOG(DEBUG) << "Tracking from " << set->id() << " against "
-             << _currentKeyFrame->id() << "...";
-  Sophus::SE3 updatedFrameToParent, odomGradientTracked, baseGradientTracked;
+		LOG(DEBUG) << "Tracking from " << set->id() << " against "
+		           << _currentKeyFrame->id() << "...";
+		Sophus::SE3 updatedFrameToParent, odomGradientTracked, baseGradientTracked;
 
-  bool odomTrackingWasGood, baseGradientTrackingWasGood;
+		bool odomTrackingWasGood, baseGradientTrackingWasGood;
 
-  // Track from either odom measurment or previous estimate.
+		// Track from either odom measurment or previous estimate.
 
-  if (Conf().useEkf && set->odomEstimateSet()) {
+		float base_residual = _tracker->trackGradient(
+				_currentKeyFrame, set->refFrame(),
+				frameToParentEstimate, baseGradientTracked,
+				baseGradientTrackingWasGood);
 
-    float odom_residual = _tracker->trackGradient(
-        _currentKeyFrame, set->refFrame(), frameToParentEstimate,
-        se3FromSim3(sim3FromSE3(set->getOdomEstimate().cast<double>()) *
-                    _latestGoodPoseFrameToParent),
-        odomGradientTracked, odomTrackingWasGood);
+		if (baseGradientTrackingWasGood) {
+				// LOG(INFO) << "previous: " <<
+				// sim3FromSE3(frameToParentEstimate).matrix3x4(); LOG(INFO) << "new: " <<
+				// sim3FromSE3(baseGradientTracked).matrix3x4();
 
-    float base_residual = _tracker->trackGradient(
-        _currentKeyFrame, set->refFrame(), frameToParentEstimate,
-        frameToParentEstimate, baseGradientTracked,
-        baseGradientTrackingWasGood);
+				// Eigen::Matrix<float, 6, 1> motion =
+				//      calculateVelocity(sim3FromSE3(frameToParentEstimate).cast<float>(),
+				//                        sim3FromSE3(baseGradientTracked).cast<float>());
 
-    float elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
-                        std::chrono::system_clock::now() - _latestTime)
-                        .count() /
-                    1000.0;
-    if (abs(set->getOdomEstimate().cast<double>().matrix3x4()(0, 3)) < 0.1 &&
-        abs(set->getOdomEstimate().cast<double>().matrix3x4()(1, 3)) < 0.1 &&
-        abs(set->getOdomEstimate().cast<double>().matrix3x4()(2, 3)) < 0.1 &&
-        odomTrackingWasGood) {
-      _tracker->updateTrack(_currentKeyFrame, set->refFrame(),
-                            odomGradientTracked, odom_residual,
-                            odomTrackingWasGood);
-      _latestGoodPoseFrameToParent =
-          sim3FromSE3(odomGradientTracked.cast<double>());
-    } else {
-      _tracker->updateTrack(_currentKeyFrame, set->refFrame(),
-                            baseGradientTracked, base_residual,
-                            baseGradientTrackingWasGood);
-      _latestGoodPoseFrameToParent =
-          sim3FromSE3(baseGradientTracked.cast<double>());
-    }
-  } else {
-    float base_residual = _tracker->trackGradient(
-        _currentKeyFrame, set->refFrame(), frameToParentEstimate,
-        frameToParentEstimate, baseGradientTracked,
-        baseGradientTrackingWasGood);
-    _tracker->updateTrack(_currentKeyFrame, set->refFrame(),
-                          baseGradientTracked, base_residual,
-                          baseGradientTrackingWasGood);
+				Sophus::SE3f motionSe3 = frameToParentEstimate.cast<float>()*baseGradientTracked.inverse().cast<float>();
+				// Sophus::SE3f motionSe3 = se3FromSim3(_latestGoodPoseFrameToParent).cast<float>()*baseGradientTracked.inverse().cast<float>();
+				// Eigen::Matrix3f R = motionSe3.rotationMatrix();
+				// Eigen::Vector3f T = motionSe3.translation();
+				// LOG(INFO) << "T\n" << T;
+				// Eigen::Vector3f angles = R.eulerAngles(2, 1, 0);
+				// Eigen::Matrix<float, 6, 1> motion;
+				// motion.block<3, 1>(0, 0) = T;
+				// motion(3, 0) = angles(2);
+				// motion(4, 0) = angles(1);
+				// motion(5, 0) = angles(0);
 
-    _latestGoodPoseFrameToParent =
-        sim3FromSE3(baseGradientTracked.cast<double>());
-  }
 
-  if (baseGradientTrackingWasGood) {
-    // LOG(INFO) << "previous: " <<
-    // sim3FromSE3(frameToParentEstimate).matrix3x4(); LOG(INFO) << "new: " <<
-    // sim3FromSE3(baseGradientTracked).matrix3x4();
+				std::chrono::duration<double, std::milli> duration =
+						_latestTime - std::chrono::high_resolution_clock::now();
 
-    Eigen::Matrix<float, 6, 1> motion =
-        calculateVelocity(sim3FromSE3(frameToParentEstimate).cast<float>(),
-                          sim3FromSE3(baseGradientTracked).cast<float>());
+				float elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+						std::chrono::system_clock::now() - _latestTime)
+				                .count() /
+				                1000.0;
 
-    std::chrono::duration<double, std::milli> duration =
-        _latestTime - std::chrono::high_resolution_clock::now();
+				// motion /= elapsed;
 
-    float elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
-                        std::chrono::system_clock::now() - _latestTime)
-                        .count() /
-                    1000.0;
+				// LOG(INFO) << "motion: \n" << motion;
+				//
+				// Eigen::Matrix<float, 6, 1> acceleration =
+				//      calculateAcceleration(_latestGoodMotion, motion);
+				// acceleration /= elapsed;
+				// _latestGoodMotion = motion;
 
-    motion /= elapsed;
+				// if (motion.norm() < Conf().max_motion) {
+				LOG(INFO) << "set->refFrame()->getCamToWorld().cast<float>\n" << set->refFrame()->getCamToWorld().cast<float>().matrix3x4();
+				_system.publishStateEstimation(_latestGoodPoseCamToWorld.cast<float>(), motionSe3, elapsed);
+				// }
+		}
 
-    // LOG(INFO) << "motion: \n" << motion;
+		LOG(INFO) << " Conf().useEkf && set->odomEstimateSet()" << Conf().useEkf << " " << set->odomEstimateSet();
+		if (Conf().useEkf && set->odomEstimateSet()) {
 
-    Eigen::Matrix<float, 6, 1> acceleration =
-        calculateAcceleration(_latestGoodMotion, motion);
-    acceleration /= elapsed;
-    _latestGoodMotion = motion;
 
-    if (motion.norm() < Conf().max_motion) {
-      _system.publishStateEstimation(motion, acceleration);
-    }
-  }
+				float odom_residual = _tracker->trackGradient(
+						_currentKeyFrame, set->refFrame(),
+						se3FromSim3(sim3FromSE3(set->getOdomEstimate().cast<double>()) *
+						            _latestGoodPoseFrameToParent),
+						odomGradientTracked, odomTrackingWasGood);
 
-  _latestGoodPoseCamToWorld = set->refFrame()->pose->getCamToWorld();
-  _latestTime = std::chrono::system_clock::now();
 
-  LOG(DEBUG) << "   ... done. Tracking took " << timer.stop() * 1000 << "ms";
-  _perf.track.update(timer);
+				float elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+						std::chrono::system_clock::now() - _latestTime)
+				                .count() /
+				                1000.0;
+				Eigen::Vector3d diff = odomGradientTracked.translation() - baseGradientTracked.translation();
+				// if (abs(set->getOdomEstimate().cast<double>().matrix3x4()(0, 3)) < 0.01 &&
+				//     abs(set->getOdomEstimate().cast<double>().matrix3x4()(1, 3)) < 0.01 &&
+				//     abs(set->getOdomEstimate().cast<double>().matrix3x4()(2, 3)) < 0.01 &&
+				//     odomTrackingWasGood) {
 
-  const bool doTrackImageSetFrames = false;
-  if (doTrackImageSetFrames && set->size() > 1) {
-    Frame::SharedPtr other = set->getFrame(1);
-    Sophus::SE3d otherToRef = set->getSE3ToRef(1);
+				if (diff.norm() < 0.075 && odomTrackingWasGood) {
 
-    //    Sophus::SE3d otherToParentEstimate = otherToRef *
-    //    updatedParentToFrame.inverse();
-    Sophus::SE3d otherToParentEstimate = otherToRef * updatedFrameToParent;
+						LOG(INFO) << "set->getOdomEstimate()\n" << set->getOdomEstimate().matrix3x4();
+						LOG(INFO) << "baseGradientTracked\n" << baseGradientTracked.matrix3x4();
+						LOG(INFO) << "odomGradientTracked\n" << odomGradientTracked.matrix3x4();
 
-    LOG(DEBUG) << "Before tracking, estimate:\n"
-               << otherToParentEstimate.matrix3x4();
+						_tracker->updateTrack(_currentKeyFrame, set->refFrame(),
+						                      odomGradientTracked, odom_residual,
+						                      true);
+						// _tracker->updateTrack(_currentKeyFrame, set->refFrame(),
+						//                       se3FromSim3(sim3FromSE3(set->getOdomEstimate().cast<double>())*
+						//                                   _latestGoodPoseFrameToParent),
+						//                       odom_residual, true);
 
-    LOG(DEBUG) << "Tracking frame 1...";
-    SE3 updatedOtherToParent =
-        _tracker->trackFrame(_currentKeyFrame, other, otherToParentEstimate);
+						// _latestGoodPoseFrameToParent =
+						//      sim3FromSE3(set->getOdomEstimate().cast<double>().inverse())*_latestGoodPoseFrameToParent;
+						// LOG(INFO) << "_latestGoodPoseFrameToParent: " << _latestGoodPoseFrameToParent.matrix3x4();
+						_latestGoodPoseFrameToParent =
+								sim3FromSE3(set->getOdomEstimate().cast<double>());
+				} else {
+						// float base_residual = _tracker->trackGradient(
+						//      _currentKeyFrame, set->refFrame(),
+						//      frameToParentEstimate, baseGradientTracked,
+						//      baseGradientTrackingWasGood);
+						LOG(WARNING) << "Tracking update too large";
+						_tracker->updateTrack(_currentKeyFrame, set->refFrame(),
+						                      baseGradientTracked, base_residual,
+						                      baseGradientTrackingWasGood);
+						_latestGoodPoseFrameToParent =
+								sim3FromSE3(baseGradientTracked.cast<double>());
+				}
+		} else {
+				LOG(WARNING) << "not using odom";
+				// float base_residual = _tracker->trackGradient(
+				//      _currentKeyFrame, set->refFrame(),
+				//      frameToParentEstimate, baseGradientTracked,
+				//      baseGradientTrackingWasGood);
+				_tracker->updateTrack(_currentKeyFrame, set->refFrame(),
+				                      baseGradientTracked, base_residual,
+				                      baseGradientTrackingWasGood);
 
-    LOG(DEBUG) << "After tracking, gets:\n" << updatedOtherToParent.matrix3x4();
-  }
-  if (Conf().doLeftRightStereo) {
-    LOG(DEBUG) << "Propagating pose from refFrame to others in set";
-    set->propagatePoseFromRefFrame();
-  }
+				_latestGoodPoseFrameToParent =
+						sim3FromSE3(baseGradientTracked.cast<double>());
+		}
 
-  tracking_lastResidual = _tracker->lastResidual;
-  tracking_lastUsage = _tracker->pointUsage;
 
-  if (manualTrackingLossIndicated || _tracker->diverged ||
-      (_system.keyFrameGraph()->keyframesAll.size() >
-           INITIALIZATION_PHASE_COUNT &&
-       !_tracker->trackingWasGood)) {
-    LOGF(WARNING,
-         "TRACKING LOST for frame %d (%1.2f%% good Points, which is %1.2f%% "
-         "of "
-         "available points; %s tracking; tracker has %s)!\n",
-         set->refFrame()->id(), 100 * _tracker->_pctGoodPerTotal,
-         100 * _tracker->_pctGoodPerGoodBad,
-         _tracker->trackingWasGood ? "GOOD" : "BAD",
-         _tracker->diverged ? "DIVERGED" : "NOT DIVERGED");
+		_latestGoodPoseCamToWorld = set->refFrame()->pose->getCamToWorld();
+		_latestTime = std::chrono::system_clock::now();
 
-    //_trackingReference->invalidate();
-    setTrackingIsBad();
+		LOG(DEBUG) << "   ... done. Tracking took " << timer.stop() * 1000 << "ms";
+		_perf.track.update(timer);
 
-    //!!TODO.  What does mapping thread do while tracking is bad?
-    //_system.mapThread->pushDoIteration();
-    manualTrackingLossIndicated = false;
-    return;
-  }
+		const bool doTrackImageSetFrames = false;
+		if (doTrackImageSetFrames && set->size() > 1) {
+				Frame::SharedPtr other = set->getFrame(1);
+				Sophus::SE3d otherToRef = set->getSE3ToRef(1);
 
-  LOG_IF(DEBUG, Conf().print.threadingInfo) << "Publishing tracked frame";
-  _system.publishTrackedFrame(set->refFrame(), frameToParentEstimate);
-  _system.publishPose(set->refFrame()->getCamToWorld().cast<float>());
-  _currentFrame = set->refFrame();
+				//    Sophus::SE3d otherToParentEstimate = otherToRef *
+				//    updatedParentToFrame.inverse();
+				Sophus::SE3d otherToParentEstimate = otherToRef * updatedFrameToParent;
 
-  // Keyframe selection
-  LOG(INFO) << "Tracked " << set->id() << " against keyframe "
-            << _currentKeyFrame->id();
-  LOG_IF(INFO, Conf().print.threadingInfo)
-      << _currentKeyFrame->numMappedOnThisTotal
-      << " frames mapped on to keyframe " << _currentKeyFrame->id()
-      << ", considering " << set->refFrame()->id() << " as new keyframe.";
+				LOG(DEBUG) << "Before tracking, estimate:\n"
+				           << otherToParentEstimate.matrix3x4();
 
-  // Push to mapping before checking if its the new keyframe
-  _system.mapThread()->doMapSet(_currentKeyFrame, set);
-  LOG(DEBUG) << "_newKeyFramePending " << _newKeyFramePending;
-  LOG(DEBUG) << "numMappedOnThisTotal "
-             << _currentKeyFrame->numMappedOnThisTotal << " Min num"
-             << MIN_NUM_MAPPED;
-  if (!_newKeyFramePending &&
-      _currentKeyFrame->numMappedOnThisTotal > MIN_NUM_MAPPED) {
-    Sophus::Vector3d dist = updatedFrameToParent.cast<double>().translation() *
-                            _currentKeyFrame->frame()->meanIdepth;
-    float minVal = fmin(0.2f + _system.keyFrameGraph()->size() * 0.8f /
-                                   INITIALIZATION_PHASE_COUNT,
-                        1.0f);
+				LOG(DEBUG) << "Tracking frame 1...";
+				SE3 updatedOtherToParent =
+						_tracker->trackFrame(_currentKeyFrame, other, otherToParentEstimate);
 
-    if (_system.keyFrameGraph()->size() < INITIALIZATION_PHASE_COUNT)
-      minVal *= 0.7;
+				LOG(DEBUG) << "After tracking, gets:\n" << updatedOtherToParent.matrix3x4();
+		}
+		if (Conf().doLeftRightStereo) {
+				LOG(DEBUG) << "Propagating pose from refFrame to others in set";
+				set->propagatePoseFromRefFrame();
+		}
 
-    lastTrackingClosenessScore =
-        _system.trackableKeyFrameSearch()->getRefFrameScore(
-            dist.dot(dist), _tracker->pointUsage);
+		tracking_lastResidual = _tracker->lastResidual;
+		tracking_lastUsage = _tracker->pointUsage;
 
-    LOG(DEBUG) << "lastTrackingClosenessScore " << lastTrackingClosenessScore
-               << " min val" << minVal;
-    if (lastTrackingClosenessScore > minVal) {
-      LOG(INFO) << "Telling mapping thread to make " << set->refFrame()->id()
-                << " the new keyframe.";
+		if (manualTrackingLossIndicated || _tracker->diverged ||
+		    (_system.keyFrameGraph()->keyframesAll.size() >
+		     INITIALIZATION_PHASE_COUNT &&
+		     !_tracker->trackingWasGood)) {
+				LOGF(WARNING,
+				     "TRACKING LOST for frame %d (%1.2f%% good Points, which is %1.2f%% "
+				     "of "
+				     "available points; %s tracking; tracker has %s)!\n",
+				     set->refFrame()->id(), 100 * _tracker->_pctGoodPerTotal,
+				     100 * _tracker->_pctGoodPerGoodBad,
+				     _tracker->trackingWasGood ? "GOOD" : "BAD",
+				     _tracker->diverged ? "DIVERGED" : "NOT DIVERGED");
 
-      _newKeyFramePending = true;
-      _system.mapThread()->doCreateNewKeyFrame(_currentKeyFrame, set);
+				//_trackingReference->invalidate();
+				setTrackingIsBad();
 
-      LOGF_IF(INFO, Conf().print.keyframeSelectionInfo,
-              "SELECT KEYFRAME %d on %d! dist %.3f + usage %.3f = %.3f > 1\n",
-              set->refFrame()->id(), set->refFrame()->trackingParent()->id(),
-              dist.dot(dist), _tracker->pointUsage,
-              _system.trackableKeyFrameSearch()->getRefFrameScore(
-                  dist.dot(dist), _tracker->pointUsage));
-    } else {
-      LOGF_IF(INFO, Conf().print.keyframeSelectionInfo,
-              "SKIPPD KEYFRAME %d on %d! dist %.3f + usage %.3f = %.3f > 1\n ",
-              set->refFrame()->id(), set->refFrame()->trackingParent()->id(),
-              dist.dot(dist), _tracker->pointUsage,
-              _system.trackableKeyFrameSearch()->getRefFrameScore(
-                  dist.dot(dist), _tracker->pointUsage));
-    }
-  }
+				//!!TODO.  What does mapping thread do while tracking is bad?
+				//_system.mapThread->pushDoIteration();
+				manualTrackingLossIndicated = false;
+				return;
+		}
+
+		LOG_IF(DEBUG, Conf().print.threadingInfo) << "Publishing tracked frame";
+		_system.publishTrackedFrame(set->refFrame(), frameToParentEstimate);
+		_system.publishPose(set->refFrame()->getCamToWorld().cast<float>());
+		_currentFrame = set->refFrame();
+
+		// Keyframe selection
+		LOG(INFO) << "Tracked " << set->id() << " against keyframe "
+		          << _currentKeyFrame->id();
+		LOG_IF(INFO, Conf().print.threadingInfo)
+		        << _currentKeyFrame->numMappedOnThisTotal
+		        << " frames mapped on to keyframe " << _currentKeyFrame->id()
+		        << ", considering " << set->refFrame()->id() << " as new keyframe.";
+
+		// Push to mapping before checking if its the new keyframe
+		_system.mapThread()->doMapSet(_currentKeyFrame, set);
+		LOG(DEBUG) << "_newKeyFramePending " << _newKeyFramePending;
+		LOG(DEBUG) << "numMappedOnThisTotal "
+		           << _currentKeyFrame->numMappedOnThisTotal << " Min num"
+		           << MIN_NUM_MAPPED;
+		if (!_newKeyFramePending &&
+		    _currentKeyFrame->numMappedOnThisTotal > MIN_NUM_MAPPED) {
+				Sophus::Vector3d dist = updatedFrameToParent.cast<double>().translation() *
+				                        _currentKeyFrame->frame()->meanIdepth;
+				float minVal = fmin(0.2f + _system.keyFrameGraph()->size() * 0.8f /
+				                    INITIALIZATION_PHASE_COUNT,
+				                    1.0f);
+
+				if (_system.keyFrameGraph()->size() < INITIALIZATION_PHASE_COUNT)
+						minVal *= 0.7;
+
+				lastTrackingClosenessScore =
+						_system.trackableKeyFrameSearch()->getRefFrameScore(
+								dist.dot(dist), _tracker->pointUsage);
+
+				LOG(DEBUG) << "lastTrackingClosenessScore " << lastTrackingClosenessScore
+				           << " min val" << minVal;
+				if (lastTrackingClosenessScore > minVal) {
+						LOG(INFO) << "Telling mapping thread to make " << set->refFrame()->id()
+						          << " the new keyframe.";
+
+						_newKeyFramePending = true;
+						_system.mapThread()->doCreateNewKeyFrame(_currentKeyFrame, set);
+						_latestGoodPoseFrameToParent = Sim3();
+
+						LOGF_IF(INFO, Conf().print.keyframeSelectionInfo,
+						        "SELECT KEYFRAME %d on %d! dist %.3f + usage %.3f = %.3f > 1\n",
+						        set->refFrame()->id(), set->refFrame()->trackingParent()->id(),
+						        dist.dot(dist), _tracker->pointUsage,
+						        _system.trackableKeyFrameSearch()->getRefFrameScore(
+										dist.dot(dist), _tracker->pointUsage));
+				} else {
+						LOGF_IF(INFO, Conf().print.keyframeSelectionInfo,
+						        "SKIPPD KEYFRAME %d on %d! dist %.3f + usage %.3f = %.3f > 1\n ",
+						        set->refFrame()->id(), set->refFrame()->trackingParent()->id(),
+						        dist.dot(dist), _tracker->pointUsage,
+						        _system.trackableKeyFrameSearch()->getRefFrameScore(
+										dist.dot(dist), _tracker->pointUsage));
+				}
+		}
 }
 
 void TrackingThread::useNewKeyFrameImpl(const std::shared_ptr<KeyFrame> &kf) {
-  LOG(DEBUG) << "Using " << kf->id() << " as new keyframe";
-  _newKeyFramePending = false;
-  _currentKeyFrame = kf;
+		LOG(DEBUG) << "Using " << kf->id() << " as new keyframe";
+		_newKeyFramePending = false;
+		_currentKeyFrame = kf;
 }
 
 Eigen::Matrix<float, 6, 1> TrackingThread::calculateVelocity(Sophus::Sim3f p1,
                                                              Sophus::Sim3f p2) {
-  Eigen::Matrix3f R1 = p1.rotationMatrix();
-  Eigen::Vector3f T1 = p1.translation();
-  Eigen::Vector3f angles1 = R1.eulerAngles(2, 1, 0);
-
-  Eigen::Matrix3f R2 = p2.rotationMatrix();
-  Eigen::Vector3f T2 = p2.translation();
-  Eigen::Vector3f angles2 = R2.eulerAngles(2, 1, 0);
-
-  Eigen::Vector3f tanslation = T2 - T1;
-  Eigen::Vector3f rotation;
-  rotation(0) = angles2(2) - angles1(2);
-  rotation(1) = angles2(1) - angles1(1);
-  rotation(2) = angles2(0) - angles1(0);
-
-  Eigen::Matrix<float, 6, 1> motion;
-  motion.block<3, 1>(0, 0) = tanslation;
-  motion.block<3, 1>(3, 0) = rotation;
-
-  return motion;
+		// Eigen::Matrix3f R1 = p1.rotationMatrix();
+		// Eigen::Vector3f T1 = p1.translation();
+		// Eigen::Vector3f angles1 = R1.eulerAngles(2, 1, 0);
+		//
+		// Eigen::Matrix3f R2 = p2.rotationMatrix();
+		// Eigen::Vector3f T2 = p2.translation();
+		// Eigen::Vector3f angles2 = R2.eulerAngles(2, 1, 0);
+		//
+		// Eigen::Vector3f tanslation = T2 - T1;
+		// Eigen::Vector3f rotation;
+		// rotation(0) = angles2(2) - angles1(2);
+		// rotation(1) = angles2(1) - angles1(1);
+		// rotation(2) = angles2(0) - angles1(0);
+		//
+		// Eigen::Matrix<float, 6, 1> motion;
+		// motion.block<3, 1>(0, 0) = tanslation;
+		// motion.block<3, 1>(3, 0) = rotation;
+		//
+		// return motion;
 }
 
 Eigen::Matrix<float, 6, 1>
 TrackingThread::calculateAcceleration(Eigen::Matrix<float, 6, 1> m1,
                                       Eigen::Matrix<float, 6, 1> m2) {
 
-  return m2 - m1;
+		// return m2 - m1;
 }
 
 // n.b. this function will be called from the mapping thread.  Ensure
@@ -332,41 +375,41 @@ TrackingThread::calculateAcceleration(Eigen::Matrix<float, 6, 1> m1,
 // TODO I don't think this is ever entered?
 // Need to add pushUnmappedTrackedFrame for image set
 void TrackingThread::takeRelocalizeResult(const RelocalizerResult &result) {
-  LOG(WARNING) << "Entering takeRelocalizeResult";
-  int succFrameID;
-  SE3 succFrameToKF_init;
-  std::shared_ptr<Frame> succFrame;
+		LOG(WARNING) << "Entering takeRelocalizeResult";
+		int succFrameID;
+		SE3 succFrameToKF_init;
+		std::shared_ptr<Frame> succFrame;
 
-  _system.mapThread()->relocalizer.stop();
-  //
-  // //_trackingReference->importFrame(keyframe);
-  // //_trackingReferenceFrameSharedPT = keyframe;
+		_system.mapThread()->relocalizer.stop();
+		//
+		// //_trackingReference->importFrame(keyframe);
+		// //_trackingReferenceFrameSharedPT = keyframe;
 
-  _tracker->trackFrame(result.keyframe, result.successfulFrame,
-                       result.successfulFrameToKeyframe);
+		_tracker->trackFrame(result.keyframe, result.successfulFrame,
+		                     result.successfulFrameToKeyframe);
 
-  if (!_tracker->trackingWasGood ||
-      _tracker->lastGoodCount() / (_tracker->lastGoodCount()) <
-          1 - 0.75f * (1 - MIN_GOODPERGOODBAD_PIXEL)) {
-    LOG(DEBUG) << "RELOCALIZATION FAILED BADLY! discarding result.";
-    //_trackingReference->invalidate();
-  } else {
-    LOG(DEBUG) << "GOOD RELOCALIZATION!";
-    // KeyFrame::SharedPtr kf(KeyFrame::Create(set));
-    // KeyFrame::SharedPtr keyframe(KeyFrame::Create(result.successfulFrame));
-    _currentKeyFrame = result.keyframe;
-    //_currentFrame = result.successfulFrame;
-    //_system.keyFrameGraph()->addKeyFrame(keyframe);
+		if (!_tracker->trackingWasGood ||
+		    _tracker->lastGoodCount() / (_tracker->lastGoodCount()) <
+		    1 - 0.75f * (1 - MIN_GOODPERGOODBAD_PIXEL)) {
+				LOG(DEBUG) << "RELOCALIZATION FAILED BADLY! discarding result.";
+				//_trackingReference->invalidate();
+		} else {
+				LOG(DEBUG) << "GOOD RELOCALIZATION!";
+				// KeyFrame::SharedPtr kf(KeyFrame::Create(set));
+				// KeyFrame::SharedPtr keyframe(KeyFrame::Create(result.successfulFrame));
+				_currentKeyFrame = result.keyframe;
+				//_currentFrame = result.successfulFrame;
+				//_system.keyFrameGraph()->addKeyFrame(keyframe);
 
-    _latestGoodPoseCamToWorld = _currentKeyFrame->pose()->getCamToWorld();
+				_latestGoodPoseCamToWorld = _currentKeyFrame->pose()->getCamToWorld();
 
-    // TODO commenting this out in the assumption I don't need it... need to
-    // revist
-    //_system.mapThread()->pushUnmappedTrackedFrame(result.successfulFrame);
-    _newKeyFramePending = false;
-    //_system.mapThread()->doCreateNewKeyFrame(_currentKeyFrame, set);
-    // std::lock_guard<std::mutex> lock(currentKeyFrameMutex);
-    // createNewKeyFrame = false;
-    setTrackingIsGood();
-  }
+				// TODO commenting this out in the assumption I don't need it... need to
+				// revist
+				//_system.mapThread()->pushUnmappedTrackedFrame(result.successfulFrame);
+				_newKeyFramePending = false;
+				//_system.mapThread()->doCreateNewKeyFrame(_currentKeyFrame, set);
+				// std::lock_guard<std::mutex> lock(currentKeyFrameMutex);
+				// createNewKeyFrame = false;
+				setTrackingIsGood();
+		}
 }

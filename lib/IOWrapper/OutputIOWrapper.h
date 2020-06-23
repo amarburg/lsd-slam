@@ -36,52 +36,59 @@ namespace lsd_slam {
  */
 class OutputIOWrapper {
 public:
-  virtual ~OutputIOWrapper(){};
+virtual ~OutputIOWrapper(){
+};
 
-  virtual void publishPose(const Sophus::Sim3f &pose) = 0;
+virtual void publishPose(const Sophus::Sim3f &pose) = 0;
 
-  virtual void
-  publishStateEstimation(const Eigen::Matrix<float, 6, 1> motion,
-                         const Eigen::Matrix<float, 6, 1> acceleration) = 0;
+virtual void
+publishStateEstimation(const Sophus::Sim3f &pose,
+                       const Eigen::Matrix<float, 6, 1> motion,
+                       const Eigen::Matrix<float, 6, 1> acceleration) = 0;
 
-  virtual void
-  publishKeyframeGraph(const std::shared_ptr<KeyFrameGraph> &graph) = 0;
+virtual void
+publishStateEstimation( const Sophus::Sim3f &pose,
+                        const Sophus::SE3f &motion,
+                        double timeElapsed) = 0;
 
-  virtual void publishPointCloud(const Frame::SharedPtr &kf) = 0;
+virtual void
+publishKeyframeGraph(const std::shared_ptr<KeyFrameGraph> &graph) = 0;
 
-  // publishes a keyframe. if that frame already exists, it is overwritten,
-  // otherwise it is added.
-  virtual void publishKeyframe(const Frame::SharedPtr &kf) = 0;
-  virtual void publishFrame(const Frame::SharedPtr &kf,
-                            const Eigen::MatrixXf G) = 0;
+virtual void publishPointCloud(const Frame::SharedPtr &kf) = 0;
 
-  virtual void publishOptimizedPoseEstimate(const Sophus::Sim3f &pose) = 0;
+// publishes a keyframe. if that frame already exists, it is overwritten,
+// otherwise it is added.
+virtual void publishKeyframe(const Frame::SharedPtr &kf) = 0;
+virtual void publishFrame(const Frame::SharedPtr &kf,
+                          const Eigen::MatrixXf G) = 0;
 
-  virtual void publishFrame(const Frame::SharedPtr &kf, const Eigen::MatrixXf G,
-                            const DepthMap::SharedPtr &depthMap) = 0;
+virtual void publishOptimizedPoseEstimate(const Sophus::Sim3f &pose) = 0;
 
-  virtual void updateDepthImage(unsigned char *data) = 0;
+virtual void publishFrame(const Frame::SharedPtr &kf, const Eigen::MatrixXf G,
+                          const DepthMap::SharedPtr &depthMap) = 0;
 
-  // published a tracked frame that did not become a keyframe (yet; i.e. has no
-  // depth data)
-  virtual void publishTrackedFrame(const Frame::SharedPtr &kf) = 0;
+virtual void updateDepthImage(unsigned char *data) = 0;
 
-  virtual void publishTrackedFrame(const Frame::SharedPtr &frame,
-                                   const Frame::SharedPtr &kf,
-                                   const Eigen::MatrixXf G,
-                                   const DepthMap::SharedPtr &depthMap,
-                                   SE3 &frameToParentEstimate) = 0;
+// published a tracked frame that did not become a keyframe (yet; i.e. has no
+// depth data)
+virtual void publishTrackedFrame(const Frame::SharedPtr &kf) = 0;
 
-  // publishes graph and all constraints, as well as updated KF poses.
-  virtual void
-  publishTrajectory(std::vector<Eigen::Matrix<float, 3, 1>> trajectory,
-                    std::string identifier) = 0;
-  virtual void publishTrajectoryIncrement(Eigen::Matrix<float, 3, 1> pt,
-                                          std::string identifier) = 0;
+virtual void publishTrackedFrame(const Frame::SharedPtr &frame,
+                                 const Frame::SharedPtr &kf,
+                                 const Eigen::MatrixXf G,
+                                 const DepthMap::SharedPtr &depthMap,
+                                 SE3 &frameToParentEstimate) = 0;
 
-  virtual void publishDebugInfo(Eigen::Matrix<float, 20, 1> data) = 0;
+// publishes graph and all constraints, as well as updated KF poses.
+virtual void
+publishTrajectory(std::vector<Eigen::Matrix<float, 3, 1> > trajectory,
+                  std::string identifier) = 0;
+virtual void publishTrajectoryIncrement(Eigen::Matrix<float, 3, 1> pt,
+                                        std::string identifier) = 0;
 
-  virtual void updateFrameNumber(int) = 0;
-  virtual void updateLiveImage(const cv::Mat &img) = 0;
+virtual void publishDebugInfo(Eigen::Matrix<float, 20, 1> data) = 0;
+
+virtual void updateFrameNumber(int) = 0;
+virtual void updateLiveImage(const cv::Mat &img) = 0;
 };
 } // namespace lsd_slam
