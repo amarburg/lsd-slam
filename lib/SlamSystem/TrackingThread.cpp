@@ -252,7 +252,7 @@ void TrackingThread::trackSetImpl(const std::shared_ptr<ImageSet> &set) {
 
 		if (manualTrackingLossIndicated || _tracker->diverged ||
 		    (_system.keyFrameGraph()->keyframesAll.size() >
-		     INITIALIZATION_PHASE_COUNT &&
+		     Conf().initalizationPhaseCount &&
 		     !_tracker->trackingWasGood)) {
 				LOGF(WARNING,
 				     "TRACKING LOST for frame %d (%1.2f%% good Points, which is %1.2f%% "
@@ -288,6 +288,7 @@ void TrackingThread::trackSetImpl(const std::shared_ptr<ImageSet> &set) {
 		// Push to mapping before checking if its the new keyframe
 		_system.mapThread()->doMapSet(_currentKeyFrame, set);
 		LOG(DEBUG) << "_newKeyFramePending " << _newKeyFramePending;
+		LOG(DEBUG) << "Conf().initalizationPhaseCount: " <<Conf().initalizationPhaseCount;
 		LOG(DEBUG) << "numMappedOnThisTotal "
 		           << _currentKeyFrame->numMappedOnThisTotal << " Min num"
 		           << MIN_NUM_MAPPED;
@@ -296,10 +297,10 @@ void TrackingThread::trackSetImpl(const std::shared_ptr<ImageSet> &set) {
 				Sophus::Vector3d dist = updatedFrameToParent.cast<double>().translation() *
 				                        _currentKeyFrame->frame()->meanIdepth;
 				float minVal = fmin(0.2f + _system.keyFrameGraph()->size() * 0.8f /
-				                    INITIALIZATION_PHASE_COUNT,
+				                    Conf().initalizationPhaseCount,
 				                    1.0f);
 
-				if (_system.keyFrameGraph()->size() < INITIALIZATION_PHASE_COUNT)
+				if (_system.keyFrameGraph()->size() < Conf().initalizationPhaseCount)
 						minVal *= 0.7;
 
 				lastTrackingClosenessScore =

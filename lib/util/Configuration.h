@@ -27,131 +27,133 @@ Configuration &Conf();
 // object.
 class Configuration {
 public:
-  friend Configuration &Conf();
+friend Configuration &Conf();
 
-  // Does additional validation on sz
-  const ImageSize &setSlamImageSize(const ImageSize &sz);
-  ImageSize slamImageSize;
-  //  Camera camera;
+// Does additional validation on sz
+const ImageSize &setSlamImageSize(const ImageSize &sz);
+ImageSize slamImageSize;
+//  Camera camera;
 
-  enum { NO_STEREO = 0, STEREO_ZED } doDepth;
+enum { NO_STEREO = 0, STEREO_ZED } doDepth;
 
-  // If false, system will block while each new image is tracked and mapped
-  bool runRealTime;
+// If false, system will block while each new image is tracked and mapped
+bool runRealTime;
 
-  // LSD-SALM params
-  bool stopOnFailedRead;
-  bool SLAMEnabled;
-  bool doKFReActivation;
-  bool doMapping;
-  bool continuousPCOutput;
+// LSD-SALM params
+bool stopOnFailedRead;
+bool SLAMEnabled;
+bool doKFReActivation;
+bool doMapping;
+bool continuousPCOutput;
 
-  // Filtering Params
-  bool useEkf;         // To use EKF odom data, if provided
-  bool publishSetPose; // Publish 'set_pose', i.e. odom estimate at loop clousre
+// Filtering Params
+bool useEkf;           // To use EKF odom data, if provided
+bool publishSetPose;   // Publish 'set_pose', i.e. odom estimate at loop clousre
 
-  // Stereo Params
-  bool doStereo; // Stereo or Mono LSD-SLAM
-  int refFrame;  // Left (0) or right(1) image as refrence frame
-  bool doSubpixelStereo;
-  bool doLeftRightStereo; // To propegate a new LSD-SLAM estimate with right
+// Stereo Params
+bool doStereo;   // Stereo or Mono LSD-SLAM
+int refFrame;    // Left (0) or right(1) image as refrence frame
+bool doSubpixelStereo;
+bool doLeftRightStereo;   // To propegate a new LSD-SLAM estimate with right
                           // image
 
-  // display variables
-  int debugDisplay;
-  bool displayDepthMap;
-  bool displayInputFusedImage;
-  bool displayInputImage;
-  bool displayGradientMap;
+// display variables
+int debugDisplay;
+bool displayDepthMap;
+bool displayInputFusedImage;
+bool displayInputImage;
+bool displayGradientMap;
 
-  bool syncDisparityImage; // To sync disprity image to left image or to have
+bool syncDisparityImage;   // To sync disprity image to left image or to have
                            // images sync
 
-  // Variables to control depth mapping
-  float minVirtualBaselineLength; // Minimum motion between frames
-  bool suppressLSDPoints; // To calculate LSD points or just use disparity
+// Variables to control depth mapping
+float minVirtualBaselineLength;   // Minimum motion between frames
+bool suppressLSDPoints;   // To calculate LSD points or just use disparity
                           // estimates
 
-  // Stereo and gradient calculations
-  float minEplLengthCrop, maxEplLengthCrop;
-  float gradientSampleDistance;
+// Stereo and gradient calculations
+float minEplLengthCrop, maxEplLengthCrop;
+float gradientSampleDistance;
 
-  // Image saturation
-  bool doImageSaturation;
-  double saturationAlpha;
-  int saturationBeta;
+// Image saturation
+bool doImageSaturation;
+double saturationAlpha;
+int saturationBeta;
 
-  // ROS frames
-  std::string lsdFrame;
-  std::string globalFrame;
-  bool useRectificationFrame;
+// ROS frames
+std::string lsdFrame;
+std::string globalFrame;
+bool useRectificationFrame;
 
-  // GUI paramaters
-  float pointcloudSize;
-  bool printGUIinfo;
-  float scale;
-  bool setScale;
-  float scaledTh;
-  bool setscaledTh;
-  float absTh;
-  bool setabsTh;
-  float nearSupport;
-  bool setnearSupport;
-  float sparisityFactor;
-  bool setsparisityFactor;
-  bool onSceenInfoDisplay;
-  bool dumpMap;
-  bool doFullReConstraintTrack;
-  bool useVarianceFiltering;
-  bool useVoxelFilter;
-  float pclLeafSize;
+// GUI paramaters
+float pointcloudSize;
+bool printGUIinfo;
+float scale;
+bool setScale;
+float scaledTh;
+bool setscaledTh;
+float absTh;
+bool setabsTh;
+float nearSupport;
+bool setnearSupport;
+float sparisityFactor;
+bool setsparisityFactor;
+bool onSceenInfoDisplay;
+bool dumpMap;
+bool doFullReConstraintTrack;
+bool useVarianceFiltering;
+bool useVoxelFilter;
+float pclLeafSize;
 
-  // Gradint creation paramaters
-  float minAbsGradCreate;
-  float minAbsGradDecrease;
+float initalizationPhaseCount;
 
-  // image pre-processing
-  bool doImageSharpen;
-  int saturationKernelSize;
+// Gradint creation paramaters
+float minAbsGradCreate;
+float minAbsGradDecrease;
 
-  float max_motion;
+// image pre-processing
+bool doImageSharpen;
+int saturationKernelSize;
 
-  struct PrintConfiguration {
-    PrintConfiguration();
+float max_motion;
 
-    bool propagationStatistics;
-    bool fillHolesStatistics;
-    bool observeStatistics;
-    bool observePurgeStatistics;
-    bool regularizeStatistics;
-    bool lineStereoStatistics;
-    bool lineStereoFails;
+struct PrintConfiguration {
+		PrintConfiguration();
 
-    bool trackingIterationInfo;
-    bool threadingInfo;
-    //
-    bool keyframeSelectionInfo;
-    bool constraintSearchInfo;
-    bool optimizationInfo;
-    bool relocalizationInfo;
-    //
-    bool frameBuildDebugInfo;
-    bool memoryDebugInfo;
-    //
-    bool mappingTiming;
-    bool overallTiming;
-  } print;
+		bool propagationStatistics;
+		bool fillHolesStatistics;
+		bool observeStatistics;
+		bool observePurgeStatistics;
+		bool regularizeStatistics;
+		bool lineStereoStatistics;
+		bool lineStereoFails;
 
-  struct PlotConfiguration {
-    PlotConfiguration();
+		bool trackingIterationInfo;
+		bool threadingInfo;
+		//
+		bool keyframeSelectionInfo;
+		bool constraintSearchInfo;
+		bool optimizationInfo;
+		bool relocalizationInfo;
+		//
+		bool frameBuildDebugInfo;
+		bool memoryDebugInfo;
+		//
+		bool mappingTiming;
+		bool overallTiming;
+} print;
 
-    int doWaitKey;
-    bool debugStereo;
-  } plot;
+struct PlotConfiguration {
+		PlotConfiguration();
+
+		int doWaitKey;
+		bool debugStereo;
+} plot;
 
 private:
-  // Private constructor.  User shouldn't make their own copy of Configuration
-  Configuration();
+// Private constructor.  User shouldn't make their own copy of Configuration
+Configuration();
 };
 
 } // namespace lsd_slam
