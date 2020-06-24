@@ -20,6 +20,7 @@ ImageSet::ImageSet(unsigned int id, const std::vector<cv::Mat> &imgs,
                    const unsigned int ref) {
 
 		// LOG(INFO) << imgs.at(1).size();
+		// LOG(INFO)<< "cams.at(0): " << cams.at(0).fx << " " << cams.at(0).fy;
 		_frames.push_back(std::make_shared<Frame>(id, cams.at(0), imgs.at(0).size(),
 		                                          0.0, imgs.at(0).data));
 		_frames.push_back(std::make_shared<Frame>(id, cams.at(1), imgs.at(1).size(),

@@ -146,12 +146,12 @@ void TrackingThread::trackSetImpl(const std::shared_ptr<ImageSet> &set) {
 				// _latestGoodMotion = motion;
 
 				// if (motion.norm() < Conf().max_motion) {
-				LOG(INFO) << "set->refFrame()->getCamToWorld().cast<float>\n" << set->refFrame()->getCamToWorld().cast<float>().matrix3x4();
+				// LOG(INFO) << "set->refFrame()->getCamToWorld().cast<float>\n" << set->refFrame()->getCamToWorld().cast<float>().matrix3x4();
 				_system.publishStateEstimation(_latestGoodPoseCamToWorld.cast<float>(), motionSe3, elapsed);
 				// }
 		}
 
-		LOG(INFO) << " Conf().useEkf && set->odomEstimateSet()" << Conf().useEkf << " " << set->odomEstimateSet();
+		// LOG(INFO) << " Conf().useEkf && set->odomEstimateSet()" << Conf().useEkf << " " << set->odomEstimateSet();
 		if (Conf().useEkf && set->odomEstimateSet()) {
 
 
@@ -174,9 +174,9 @@ void TrackingThread::trackSetImpl(const std::shared_ptr<ImageSet> &set) {
 
 				if (diff.norm() < 0.075 && odomTrackingWasGood) {
 
-						LOG(INFO) << "set->getOdomEstimate()\n" << set->getOdomEstimate().matrix3x4();
-						LOG(INFO) << "baseGradientTracked\n" << baseGradientTracked.matrix3x4();
-						LOG(INFO) << "odomGradientTracked\n" << odomGradientTracked.matrix3x4();
+						// LOG(INFO) << "set->getOdomEstimate()\n" << set->getOdomEstimate().matrix3x4();
+						// LOG(INFO) << "baseGradientTracked\n" << baseGradientTracked.matrix3x4();
+						// LOG(INFO) << "odomGradientTracked\n" << odomGradientTracked.matrix3x4();
 
 						_tracker->updateTrack(_currentKeyFrame, set->refFrame(),
 						                      odomGradientTracked, odom_residual,
@@ -196,7 +196,7 @@ void TrackingThread::trackSetImpl(const std::shared_ptr<ImageSet> &set) {
 						//      _currentKeyFrame, set->refFrame(),
 						//      frameToParentEstimate, baseGradientTracked,
 						//      baseGradientTrackingWasGood);
-						LOG(WARNING) << "Tracking update too large";
+						// LOG(WARNING) << "Tracking update too large";
 						_tracker->updateTrack(_currentKeyFrame, set->refFrame(),
 						                      baseGradientTracked, base_residual,
 						                      baseGradientTrackingWasGood);
@@ -204,7 +204,7 @@ void TrackingThread::trackSetImpl(const std::shared_ptr<ImageSet> &set) {
 								sim3FromSE3(baseGradientTracked.cast<double>());
 				}
 		} else {
-				LOG(WARNING) << "not using odom";
+				// LOG(WARNING) << "not using odom";
 				// float base_residual = _tracker->trackGradient(
 				//      _currentKeyFrame, set->refFrame(),
 				//      frameToParentEstimate, baseGradientTracked,

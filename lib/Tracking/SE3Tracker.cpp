@@ -1033,6 +1033,7 @@ float SE3Tracker::calcResidualAndBuffers(const Eigen::Vector3f *refPoint,
 		float fy_l = KLvl(1, 1);
 		float cx_l = KLvl(0, 2);
 		float cy_l = KLvl(1, 2);
+		// LOG(INFO) << "KLvl\n" << KLvl;
 
 		Eigen::Matrix3f rotMat = referenceToFrame.rotationMatrix();
 		Eigen::Vector3f transVec = referenceToFrame.translation();
@@ -1064,11 +1065,13 @@ float SE3Tracker::calcResidualAndBuffers(const Eigen::Vector3f *refPoint,
 		for (; refPoint < refPoint_max; refPoint++, refColVar++, idxBuf++, loop++) {
 
 				Eigen::Vector3f Wxp = rotMat * (*refPoint) + transVec;
+				// LOG(INFO) << "Wxp[0]: " << Wxp[0] << "Wxp[2]: " <<  Wxp[2] << "fx_l: " << fx_l << "cx_l: " <<cx_l;
 				float u_new = (Wxp[0] / Wxp[2]) * fx_l + cx_l;
 				float v_new = (Wxp[1] / Wxp[2]) * fy_l + cy_l;
 
 				// step 1a: coordinates have to be in image:
 				// (inverse test to exclude NANs)
+				// LOG(INFO) << "u_new: " << u_new << "v_new: " << v_new << "w: " << w << "h: " << h;
 				if (!(u_new > 1 && v_new > 1 && u_new < w - 2 && v_new < h - 2)) {
 						if (isGoodOutBuffer != 0)
 								isGoodOutBuffer[*idxBuf] = false;
