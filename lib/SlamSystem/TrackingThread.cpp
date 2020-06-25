@@ -172,6 +172,7 @@ void TrackingThread::trackSetImpl(const std::shared_ptr<ImageSet> &set) {
 				//     abs(set->getOdomEstimate().cast<double>().matrix3x4()(2, 3)) < 0.01 &&
 				//     odomTrackingWasGood) {
 
+				//TODO remove hardcode...
 				if (diff.norm() < 0.075 && odomTrackingWasGood) {
 
 						// LOG(INFO) << "set->getOdomEstimate()\n" << set->getOdomEstimate().matrix3x4();
@@ -196,7 +197,7 @@ void TrackingThread::trackSetImpl(const std::shared_ptr<ImageSet> &set) {
 						//      _currentKeyFrame, set->refFrame(),
 						//      frameToParentEstimate, baseGradientTracked,
 						//      baseGradientTrackingWasGood);
-						// LOG(WARNING) << "Tracking update too large";
+						LOG(WARNING) << "Tracking update too large";
 						_tracker->updateTrack(_currentKeyFrame, set->refFrame(),
 						                      baseGradientTracked, base_residual,
 						                      baseGradientTrackingWasGood);
